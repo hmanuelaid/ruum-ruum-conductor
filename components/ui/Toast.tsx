@@ -1,17 +1,16 @@
-// ─── components/ui/Toast.tsx ──────────────────────────────────────────────────
 'use client'
-
-import { useToast } from '@/lib/store'
+import { useAppStore } from '@/lib/store'
 
 export default function Toast() {
-  const { message } = useToast()
+  const { toastMsg } = useAppStore()
+
   return (
     <div
       role="status"
       aria-live="polite"
-      className={`toast${message ? ' visible' : ''}`}
+      className={`toast${toastMsg ? ' visible' : ''}`}
     >
-      {message}
+      {toastMsg}
     </div>
   )
 }
