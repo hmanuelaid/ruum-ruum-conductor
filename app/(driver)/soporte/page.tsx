@@ -1,13 +1,9 @@
-
-// ════════════════════════════════════════════════════════════════════
-// app/(driver)/soporte/page.tsx
-// ════════════════════════════════════════════════════════════════════
 'use client'
 import { Chip } from '@/components/ui/Chip'
-import { useToast } from '@/lib/store'
+import { useAppStore } from '@/lib/store'
 
 export default function SoportePage() {
-  const { show } = useToast()
+  const { showToast } = useAppStore()
 
   return (
     <>
@@ -15,9 +11,10 @@ export default function SoportePage() {
         <h2>¿Necesitas ayuda?</h2>
         <p className="muted">Elige una opción para contactar al equipo operativo de Ruum Ruum.</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <button className="btn-primary" onClick={() => show('Conectando con soporte...')}>
+          <button className="btn-primary" onClick={() => showToast('Conectando con soporte...')}>
             <span>Iniciar chat</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width={18} height={18}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round" width={18} height={18}>
               <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/>
             </svg>
           </button>
@@ -33,7 +30,10 @@ export default function SoportePage() {
             <p>Evidencias, pagos y reportes.</p>
           </div>
           <button className="btn-mini" aria-label="Abrir FAQs">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18 15 12 9 6"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round" width={18} height={18}>
+              <path d="M9 18 15 12 9 6"/>
+            </svg>
           </button>
         </article>
         <article className="list-card">
