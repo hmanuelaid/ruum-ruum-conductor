@@ -1,21 +1,29 @@
-import TopBar from '@/components/layout/TopBar'
-import BottomNav from '@/components/layout/BottomNav'
-import SettingsSheet from '@/components/layout/SettingsSheet'
-import TripSheet from '@/components/trip/TripSheet'
-import Toast from '@/components/ui/Toast'
-import { mockDriver, mockDocuments } from '@/lib/mock-data'
+import type { Metadata, Viewport } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
 
-export default function DriverLayout({ children }: { children: React.ReactNode }) {
+const inter = Inter({ subsets: ['latin'], variable: '--font' })
+
+export const metadata: Metadata = {
+  title: 'Ruum Ruum Conductor',
+  description: 'App para conductores de Ruum Ruum',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#080a0f',
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="phone-shell">
-      <TopBar driver={mockDriver} />
-      <BottomNav />
-      <main className="page-content" id="main-content">
-        {children}
-      </main>
-      <SettingsSheet documents={mockDocuments} />
-      <TripSheet />
-      <Toast />
-    </div>
+    <html lang="es" className={inter.variable}>
+      <body>{children}</body>
+    </html>
   )
 }
