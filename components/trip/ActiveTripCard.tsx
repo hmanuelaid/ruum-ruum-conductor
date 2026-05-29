@@ -1,25 +1,17 @@
 'use client'
-
-import { useActiveTrip } from '@/lib/store'
+import { useAppStore } from '@/lib/store'
 import type { Trip } from '@/lib/types'
 
 export default function ActiveTripCard({ trip }: { trip: Trip }) {
-  const { setTrip, openSheet } = useActiveTrip()
-
-  const handleOpen = () => {
-    setTrip(trip)
-    openSheet()
-  }
+  const { setActiveTrip } = useAppStore()
 
   return (
     <article className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span className="muted" style={{ fontSize: 12 }}>Viaje ID · {trip.id}</span>
         <strong style={{ fontSize: 13, color: 'var(--warning)' }}>En curso</strong>
       </div>
 
-      {/* Route */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0, marginTop: 4 }} aria-hidden="true" />
@@ -37,17 +29,16 @@ export default function ActiveTripCard({ trip }: { trip: Trip }) {
         </div>
       </div>
 
-      {/* Stats */}
       <div style={{ display: 'flex', gap: 16, fontSize: 13, color: 'var(--muted)' }}>
         <span><strong style={{ color: 'var(--text)' }}>{trip.etaMin} min</strong> ETA</span>
         <span><strong style={{ color: 'var(--text)' }}>${trip.estimatedMXN.toLocaleString('es-MX')}</strong> estimado</span>
         <span><strong style={{ color: 'var(--text)' }}>{trip.distanceKm} km</strong> ruta</span>
       </div>
 
-      {/* CTA */}
-      <button className="btn-primary" onClick={handleOpen}>
+      <button className="btn-primary" onClick={() => setActiveTrip(trip)}>
         <span>Dirígete a destino</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width={18} height={18}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          strokeLinecap="round" strokeLinejoin="round" width={18} height={18}>
           <path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>
         </svg>
       </button>

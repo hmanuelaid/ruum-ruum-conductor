@@ -1,12 +1,9 @@
-
-// ─── components/driver/AvailabilityToggle.tsx ─────────────────────────────────
 'use client'
-
-import { useAvailability } from '@/lib/store'
+import { useAppStore } from '@/lib/store'
 import { Switch } from '@/components/ui/Switch'
 
 export default function AvailabilityToggle() {
-  const { available, toggle } = useAvailability()
+  const { available, setAvailable } = useAppStore()
 
   return (
     <section className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -19,7 +16,7 @@ export default function AvailabilityToggle() {
           {available ? 'Listo para recibir viajes' : 'Modo offline activo'}
         </p>
       </div>
-      <Switch checked={available} onToggle={toggle} label="Cambiar disponibilidad" />
+      <Switch checked={available} onToggle={() => setAvailable(!available)} label="Cambiar disponibilidad" />
     </section>
   )
 }

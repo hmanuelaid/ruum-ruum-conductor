@@ -1,10 +1,6 @@
-
-// ════════════════════════════════════════════════════════════════════
-// app/(driver)/viajes/page.tsx
-// ════════════════════════════════════════════════════════════════════
 'use client'
 import { useState } from 'react'
-import { useActiveTrip } from '@/lib/store'
+import { useAppStore } from '@/lib/store'
 import { Chip } from '@/components/ui/Chip'
 import { mockTrips } from '@/lib/mock-data'
 import type { Trip } from '@/lib/types'
@@ -16,12 +12,8 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 function TripRow({ trip }: { trip: Trip }) {
-  const { setTrip, openSheet } = useActiveTrip()
+  const { setActiveTrip } = useAppStore()
   const isActive = trip.status === 'active'
-
-  const handleOpen = () => {
-    if (isActive) { setTrip(trip); openSheet() }
-  }
 
   return (
     <article className={`list-card${isActive ? ' accent-left' : ''}`}>
@@ -31,8 +23,11 @@ function TripRow({ trip }: { trip: Trip }) {
         <p>{trip.etaMin} min · ${trip.estimatedMXN.toLocaleString('es-MX')}</p>
       </div>
       {isActive ? (
-        <button className="btn-mini" onClick={handleOpen} aria-label="Abrir viaje activo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18 15 12 9 6"/></svg>
+        <button className="btn-mini" onClick={() => setActiveTrip(trip)} aria-label="Abrir viaje activo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round" width={18} height={18}>
+            <path d="M9 18 15 12 9 6"/>
+          </svg>
         </button>
       ) : (
         <Chip status={trip.status}>
@@ -57,13 +52,8 @@ export default function ViajesPage() {
 
       <div className="segmented" role="tablist" aria-label="Filtro de viajes">
         {filters.map(f => (
-          <button
-            key={f}
-            role="tab"
-            aria-selected={filter === f}
-            className={filter === f ? 'active' : ''}
-            onClick={() => setFilter(f)}
-          >
+          <button key={f} role="tab" aria-selected={filter === f}
+            className={filter === f ? 'active' : ''} onClick={() => setFilter(f)}>
             {f}
           </button>
         ))}
@@ -75,4 +65,3 @@ export default function ViajesPage() {
     </>
   )
 }
-
