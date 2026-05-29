@@ -1,67 +1,65 @@
 'use client'
-
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { Trip } from './types'
 
-// ─── Toast ─────────────────────────────────────────────────────────────────────
-interface ToastState {
-  message: string | null
-  show: (msg: string, ms?: number) => void
-  hide: () => void
+interface Driver {
+  id: string
+  name: string
+  phone: string
+  email: string
+  avatarUrl?: string
+  docsExpiry?: string // ISO date del doc más próximo a vencer
 }
 
-export const useToast = create<ToastState>((set) => ({
-  message: null,
-  show: (msg, ms = 3000) => {
-    set({ message: msg })
-    setTimeout(() => set({ message: null }), ms)
-  },
-  hide: () => set({ message: null }),
-}))
+interface AuthState {
+  driver: Driver | null
+  isAuthenticated: boolean
+  firstLaunch: boolean
+  onboardingComplete: boolean
+  setDriver: (driver: Driver) => void
+  logout: () => void
+  completeOnboarding: () => void
+}
 
-// ─── Driver availability ───────────────────────────────────────────────────────
-interface AvailabilityState {
+interface AppState {
   available: boolean
-  toggle: () => void
+  activeTrip: Trip | null
+  settingsOpen: boolean
+  toastMsg: string | null
+  setAvailable: (v: boolean) => void
+  setActiveTrip: (t: Trip | null) => void
+  setSettingsOpen: (v: boolean) => void
+  showToast: (msg: string) => void
+  clearToast: () => void
 }
 
-export const useAvailability = create<AvailabilityState>((set) => ({
-  available: true,
-  toggle: () => set((s) => ({ available: !s.available })),
-}))
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      driver: null,
+      isAuthenticated: false,
+      firstLaunch: true,
+      onboardingComplete: false,
+      setDriver: (driver) => set({ driver, isAuthenticated: true }),
+      logout: () => set({ driver: null, isAuthenticated: false }),
+      completeOnboarding: () => set({ firstLaunch: false, onboardingComplete: true }),
+    }),
+    { name: 'ruum-auth' }
+  )
+)
 
-// ─── Active trip ───────────────────────────────────────────────────────────────
-type TripStep = 'en-route' | 'arrived' | 'evidence' | 'closed'
-
-interface ActiveTripState {
-  trip: Trip | null
-  step: TripStep
-  sheetOpen: boolean
-  setTrip: (t: Trip | null) => void
-  setStep: (s: TripStep) => void
-  openSheet: () => void
-  closeSheet: () => void
-}
-
-export const useActiveTrip = create<ActiveTripState>((set) => ({
-  trip: null,
-  step: 'en-route',
-  sheetOpen: false,
-  setTrip: (trip) => set({ trip }),
-  setStep: (step) => set({ step }),
-  openSheet: () => set({ sheetOpen: true }),
-  closeSheet: () => set({ sheetOpen: false }),
-}))
-
-// ─── Settings sheet ────────────────────────────────────────────────────────────
-interface SettingsState {
-  open: boolean
-  openSheet: () => void
-  closeSheet: () => void
-}
-
-export const useSettings = create<SettingsState>((set) => ({
-  open: false,
-  openSheet: () => set({ open: true }),
-  closeSheet: () => set({ open: false }),
+export const useAppStore = create<AppState>()((set) => ({
+  available: false,
+  activeTrip: null,
+  settingsOpen: false,
+  toastMsg: null,
+  setAvailable: (v) => set({ available: v }),
+  setActiveTrip: (t) => set({ activeTrip: t }),
+  setSettingsOpen: (v) => set({ settingsOpen: v }),
+  showToast: (msg) => {
+    set({ toastMsg: msg })
+    setTimeout(() => set({ toastMsg: null }), 3000)
+  },
+  clearToast: () => set({ toastMsg: null }),
 }))

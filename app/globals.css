@@ -444,3 +444,174 @@ html, body {
   cursor: pointer; transition: background .15s, color .15s;
 }
 .segmented button.active { background: var(--surface-2); color: var(--text); }
+/* ─── Onboarding & Auth ─────────────────────────────────────── */
+.onboarding-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  background: var(--bg);
+  position: relative;
+}
+
+.onboarding-card {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 2rem 1.5rem;
+  background: var(--surface);
+  border-radius: 1.25rem;
+  border: 1px solid var(--border);
+}
+
+.brand-mark {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.onboarding-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+
+.onboarding-sub {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.step-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  padding: 3px 10px;
+  border-radius: 20px;
+  width: fit-content;
+}
+
+/* Slides */
+.slide-card { text-align: center; }
+.slide-emoji { font-size: 3rem; line-height: 1; }
+.dot-row { display: flex; justify-content: center; gap: 6px; margin: 0.5rem 0; }
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.2s, width 0.2s;
+}
+.dot-active { background: var(--primary); width: 20px; border-radius: 4px; }
+
+/* Forms */
+.auth-form { display: flex; flex-direction: column; gap: 0.5rem; }
+.field-label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+.field-input {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.95rem;
+  outline: none;
+  box-sizing: border-box;
+  margin-bottom: 0.25rem;
+  transition: border-color 0.15s;
+}
+.field-input:focus { border-color: var(--primary); }
+.field-error { font-size: 0.8rem; color: #e53e3e; margin: 0; }
+
+/* OTP */
+.otp-row { display: flex; gap: 8px; justify-content: center; margin: 0.5rem 0; }
+.otp-box {
+  width: 44px; height: 52px;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.otp-box:focus { border-color: var(--primary); }
+
+/* Documents */
+.doc-list { display: flex; flex-direction: column; gap: 8px; }
+.doc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.doc-row:hover { background: var(--surface); }
+.doc-done { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.doc-icon { font-size: 1rem; width: 20px; text-align: center; color: var(--primary); }
+.doc-label { flex: 1; font-size: 0.9rem; color: var(--text); }
+.doc-opt { font-size: 0.7rem; color: var(--text-muted); }
+
+/* Buttons */
+.btn-primary {
+  width: 100%;
+  padding: 0.8rem;
+  border-radius: 10px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  margin-top: 0.25rem;
+}
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-ghost {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  text-align: center;
+}
+.btn-skip {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.btn-back {
+  position: absolute;
+  top: 1.25rem;
+  left: 1.25rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
