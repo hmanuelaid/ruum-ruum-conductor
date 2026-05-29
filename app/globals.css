@@ -764,3 +764,28 @@ html, body {
 
   .toast { left: calc(260px + 50%); }
 }
+/* ─── Fix trip-steps solapamiento ─────────────────────────────── */
+.trip-steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--muted);
+  min-height: 28px;
+}
+
+.trip-steps li > span:first-child {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+
+.trip-steps li > span:last-child {
+  flex: 1;
+  line-height: 1.4;
+}

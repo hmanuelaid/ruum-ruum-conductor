@@ -57,11 +57,20 @@ export default function TripSheet() {
               </a>
             </div>
 
-            <ol className="trip-steps">
-              <li className="done"><span /><span>Inicio confirmado</span></li>
-              <li className="active"><span /><span>En camino al destino</span></li>
-              <li><span /><span>Cargar evidencia final</span></li>
-            </ol>
+           <ol className="trip-steps">
+  <li className="done">
+    <span aria-hidden="true" />
+    <span>Inicio confirmado</span>
+  </li>
+  <li className="active">
+    <span aria-hidden="true" />
+    <span>En camino al destino</span>
+  </li>
+  <li>
+    <span aria-hidden="true" />
+    <span>Cargar evidencia final</span>
+  </li>
+</ol>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <h3 style={{ fontSize: 15, fontWeight: 600 }}>Evidencia de cierre</h3>
@@ -83,3 +92,4 @@ export default function TripSheet() {
     </div>
   )
 }
+
