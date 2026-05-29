@@ -789,3 +789,6 @@ html, body {
   flex: 1;
   line-height: 1.4;
 }
+/* ─── Timeline fix ───────────────────────────────────────────── */
+.timeline { list-style: none; padding: 0; margin: 0; }
+.timeline-item.done .timeline-dot.done { background: var(--success); border-color: var(--success); }
