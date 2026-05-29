@@ -1,7 +1,7 @@
 import TopBar from '@/components/layout/TopBar'
 import BottomNav from '@/components/layout/BottomNav'
 import SettingsSheet from '@/components/layout/SettingsSheet'
-import TripSheet from '@/components/trip/TripSheet'
+import TripDetailSheet from '@/components/trip/TripDetailSheet'
 import Toast from '@/components/ui/Toast'
 import { mockDriver, mockDocuments } from '@/lib/mock-data'
 
@@ -14,7 +14,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         {children}
       </main>
       <SettingsSheet documents={mockDocuments} />
-      <TripSheet />
+      <TripDetailSheet />
       <Toast />
     </div>
   )
