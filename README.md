@@ -34,3 +34,16 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Environment
+
+Copy `.env.example` to `.env.local` and fill the values before running locally. Required variables used by this project:
+
+- `BASIC_AUTH_USER` — user for basic middleware auth (development)
+- `BASIC_AUTH_PASS` — password for basic middleware auth (development)
+- `NEXT_PUBLIC_SUPABASE_URL` — your Supabase public URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — your Supabase anon key
+
+DO NOT commit `.env.local` to the repository. This repo contained a committed `.env.local` with keys; those have been removed from the working tree. If any credentials were exposed, rotate them immediately (Supabase anon keys and any other secrets).
+
+CI: a minimal GitHub Actions workflow runs `npm run lint` and `npm run typecheck` on pushes and PRs (see `.github/workflows/ci.yml`).
