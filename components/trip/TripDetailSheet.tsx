@@ -1,11 +1,6 @@
 'use client'
 import { useAppStore } from '@/lib/store'
 
-function formatDate(iso?: string) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })
-}
-
 const STEPS = [
   'Inicio confirmado',
   'En camino al origen',
@@ -53,18 +48,18 @@ export default function TripDetailSheet() {
               </button>
             </div>
 
-            {/* Vehículo */}
-            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <span style={{ fontSize: '2rem' }}>🚗</span>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontWeight: 700, fontSize: 15 }}>
-                  {activeTrip.vehicle?.brand} {activeTrip.vehicle?.model} {activeTrip.vehicle?.year}
-                </p>
-                <p className="muted">{activeTrip.vehicle?.color} · {activeTrip.vehicle?.plates}</p>
-                <p className="muted" style={{ fontSize: 12 }}>
-                  {activeTrip.vehicle?.transmission === 'automatica' ? 'Automático' : 'Manual'} · {activeTrip.vehicle?.condition}
-                </p>
-              </div>
+            {/* Stats del viaje */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+              {[
+                { label: 'ETA', value: `${activeTrip.etaMin} min` },
+                { label: 'Distancia', value: `${activeTrip.distanceKm} km` },
+                { label: 'Estimado', value: `$${activeTrip.estimatedMXN.toLocaleString('es-MX')}` },
+              ].map(({ label, value }) => (
+                <div key={label} className="metric-card">
+                  <p className="value" style={{ fontSize: '1.1rem' }}>{value}</p>
+                  <p className="label">{label}</p>
+                </div>
+              ))}
             </div>
 
             {/* Ruta */}
@@ -78,56 +73,32 @@ export default function TripDetailSheet() {
                 </div>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div>
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Origen</p>
-                    <p style={{ fontWeight: 600, fontSize: 14 }}>{activeTrip.origin?.address}</p>
-                    {activeTrip.origin?.reference && (
-                      <p className="muted" style={{ fontSize: 12 }}>{activeTrip.origin.reference}</p>
-                    )}
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{activeTrip.origin.label}</p>
+                    <p style={{ fontWeight: 600, fontSize: 14 }}>{activeTrip.origin.address}</p>
                   </div>
                   <div>
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Destino</p>
-                    <p style={{ fontWeight: 600, fontSize: 14 }}>{activeTrip.destination?.address}</p>
-                    {activeTrip.destination?.reference && (
-                      <p className="muted" style={{ fontSize: 12 }}>{activeTrip.destination.reference}</p>
-                    )}
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{activeTrip.destination.label}</p>
+                    <p style={{ fontWeight: 600, fontSize: 14 }}>{activeTrip.destination.address}</p>
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 16, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-                <span style={{ fontSize: 13 }}>
-                  <strong>{activeTrip.distanceKm ?? activeTrip.estimatedMXN}</strong>
-                  <span className="muted"> km</span>
-                </span>
-                <span style={{ fontSize: 13 }}>
-                  <strong>${(activeTrip.estimatedMXN ?? 0).toLocaleString('es-MX')}</strong>
-                  <span className="muted"> estimado</span>
-                </span>
-              </div>
             </div>
 
-            {/* Contacto del usuario */}
-            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <p className="kicker">Contacto</p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <p style={{ fontWeight: 600, fontSize: 14 }}>
-                    {activeTrip.originContact?.name ?? activeTrip.passengerName ?? 'Cliente'}
-                  </p>
-                  <p className="muted">{activeTrip.originContact?.phone ?? activeTrip.passengerPhone ?? ''}</p>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <a href={`tel:${activeTrip.originContact?.phone}`}
-                    style={{
-                      width: 38, height: 38, borderRadius: '50%',
-                      background: 'var(--primary-dim)',
-                      display: 'grid', placeItems: 'center',
-                      color: 'var(--primary)', textDecoration: 'none',
-                    }}>📞</a>
-                </div>
-              </div>
+            {/* Navegación */}
+            <div className="action-grid">
+              <a className="btn-secondary" style={{ textDecoration: 'none', textAlign: 'center' }}
+                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeTrip.destination.address)}`}
+                target="_blank" rel="noreferrer">
+                🗺️ Google Maps
+              </a>
+              <a className="btn-secondary" style={{ textDecoration: 'none', textAlign: 'center' }}
+                href={`https://waze.com/ul?q=${encodeURIComponent(activeTrip.destination.address)}&navigate=yes`}
+                target="_blank" rel="noreferrer">
+                🚦 Waze
+              </a>
             </div>
 
-            {/* Pasos del viaje */}
+            {/* Pasos del traslado */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <p className="kicker" style={{ marginBottom: 8 }}>Pasos del traslado</p>
               <ol className="timeline">
@@ -154,20 +125,6 @@ export default function TripDetailSheet() {
               </ol>
             </div>
 
-            {/* Navegación */}
-            <div className="action-grid">
-              <a className="btn-secondary" style={{ textDecoration: 'none', textAlign: 'center' }}
-                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeTrip.destination?.address ?? '')}`}
-                target="_blank" rel="noreferrer">
-                🗺️ Google Maps
-              </a>
-              <a className="btn-secondary" style={{ textDecoration: 'none', textAlign: 'center' }}
-                href={`https://waze.com/ul?q=${encodeURIComponent(activeTrip.destination?.address ?? '')}&navigate=yes`}
-                target="_blank" rel="noreferrer">
-                🚦 Waze
-              </a>
-            </div>
-
             {/* Evidencia de cierre */}
             <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <p style={{ fontWeight: 600, fontSize: 15 }}>Evidencia de cierre</p>
@@ -191,4 +148,4 @@ export default function TripDetailSheet() {
       </aside>
     </div>
   )
-                  }
+}
