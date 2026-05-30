@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useAuthStore } from '@/lib/store'
+import { useAppStore, useAuthStore } from '@/lib/store'
 import { createClient } from '@/lib/supabase'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -10,29 +10,143 @@ const STATUS_LABELS: Record<string, string> = {
   evidencia_final_pendiente: 'Evidencia final pendiente', finalizado: 'Finalizado',
 }
 
+type EvidenceType = 'inicial' | 'final'
+
+interface ActiveTrip {
+  id: string
+  status: string
+  origin_address: string | null
+  origin_reference: string | null
+  origin_contact_name: string | null
+  origin_contact_phone: string | null
+  destination_address: string | null
+  destination_reference: string | null
+  dest_contact_name: string | null
+  dest_contact_phone: string | null
+  vehicle_brand: string | null
+  vehicle_model: string | null
+  vehicle_year: number | null
+  vehicle_color: string | null
+  vehicle_plates: string | null
+  vehicle_condition: string | null
+  driver_pay_mxn: number | null
+  distance_km: number | null
+}
+
+const NEXT_STATUS_BY_EVIDENCE: Record<EvidenceType, string> = {
+  inicial: 'traslado_curso',
+  final: 'finalizado',
+}
+
 export default function PanelPage() {
   const { driver } = useAuthStore()
-  const [trip, setTrip] = useState<any>(null)
+  const { showToast } = useAppStore()
+  const [trip, setTrip] = useState<ActiveTrip | null>(null)
   const [loading, setLoading] = useState(true)
+  const [evidenceFiles, setEvidenceFiles] = useState<File[]>([])
+  const [kmReading, setKmReading] = useState('')
+  const [fuelLevel, setFuelLevel] = useState('')
+  const [notes, setNotes] = useState('')
+  const [uploadingEvidence, setUploadingEvidence] = useState(false)
 
   useEffect(() => {
     if (!driver) return
-    loadActiveTrip()
+    const driverId = driver.id
+    let cancelled = false
+
+    async function loadActiveTrip() {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('trips')
+        .select('*')
+        .eq('driver_id', driverId)
+        .not('status', 'in', '("finalizado","cancelado")')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (cancelled) return
+      setTrip(data)
+      setLoading(false)
+    }
+
+    void loadActiveTrip()
+    return () => { cancelled = true }
   }, [driver])
 
-  async function loadActiveTrip() {
-    setLoading(true)
+  function resetEvidenceForm() {
+    setEvidenceFiles([])
+    setKmReading('')
+    setFuelLevel('')
+    setNotes('')
+  }
+
+  async function uploadEvidence(type: EvidenceType) {
+    if (!trip || !driver) return
+    if (evidenceFiles.length === 0) {
+      showToast('Agrega al menos una foto')
+      return
+    }
+
+    setUploadingEvidence(true)
     const supabase = createClient()
-    const { data } = await supabase
-      .from('trips')
-      .select('*')
-      .eq('driver_id', driver!.id)
-      .not('status', 'in', '("finalizado","cancelado")')
-      .order('created_at', { ascending: false })
-      .limit(1)
+    const uploadedUrls: string[] = []
+
+    for (const [index, file] of evidenceFiles.entries()) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-')
+      const path = `${trip.id}/${type}/${Date.now()}-${index}-${safeName}`
+      const { error: uploadError } = await supabase.storage
+        .from('evidence')
+        .upload(path, file, { upsert: false })
+
+      if (uploadError) {
+        showToast('Error al subir una foto')
+        setUploadingEvidence(false)
+        return
+      }
+
+      const { data } = supabase.storage.from('evidence').getPublicUrl(path)
+      uploadedUrls.push(data.publicUrl)
+    }
+
+    const { data: evidence, error: evidenceError } = await supabase
+      .from('evidence')
+      .insert({
+        trip_id: trip.id,
+        type,
+        status: 'en_revision',
+        km_reading: kmReading ? Number(kmReading) : null,
+        fuel_level: fuelLevel ? Number(fuelLevel) : null,
+        notes: notes || null,
+      })
+      .select('id')
       .single()
-    setTrip(data)
-    setLoading(false)
+
+    if (evidenceError || !evidence) {
+      showToast('Error al guardar la evidencia')
+      setUploadingEvidence(false)
+      return
+    }
+
+    const { error: photosError } = await supabase.from('evidence_photos').insert(
+      uploadedUrls.map(url => ({
+        evidence_id: evidence.id,
+        url,
+      }))
+    )
+
+    if (photosError) {
+      showToast('Error al guardar las fotos')
+      setUploadingEvidence(false)
+      return
+    }
+
+    const nextStatus = NEXT_STATUS_BY_EVIDENCE[type]
+    await supabase.from('trips').update({ status: nextStatus }).eq('id', trip.id)
+    setTrip({ ...trip, status: nextStatus })
+    resetEvidenceForm()
+    showToast(type === 'inicial' ? 'Evidencia inicial cargada' : 'Evidencia final cargada')
+    setUploadingEvidence(false)
   }
 
   async function updateStatus(newStatus: string) {
@@ -40,6 +154,7 @@ export default function PanelPage() {
     const supabase = createClient()
     await supabase.from('trips').update({ status: newStatus }).eq('id', trip.id)
     setTrip({ ...trip, status: newStatus })
+    resetEvidenceForm()
   }
 
   if (loading) return (
@@ -108,6 +223,94 @@ export default function PanelPage() {
           </div>
         </div>
       </div>
+
+      {(trip.status === 'evidencia_inicial_pendiente' || trip.status === 'evidencia_final_pendiente') && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <p style={{ fontWeight: 700, fontSize: 14 }}>
+              {trip.status === 'evidencia_inicial_pendiente' ? 'Evidencia inicial' : 'Evidencia final'}
+            </p>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+              Sube fotos claras del vehículo y registra kilometraje, combustible y notas relevantes.
+            </p>
+          </div>
+
+          <label style={{
+            border: '1px dashed var(--border)',
+            background: 'var(--surface-2)',
+            borderRadius: 12,
+            padding: 16,
+            display: 'grid',
+            placeItems: 'center',
+            gap: 6,
+            cursor: 'pointer',
+            textAlign: 'center',
+          }}>
+            <span style={{ fontSize: 24 }}>📸</span>
+            <strong style={{ fontSize: 13 }}>Seleccionar fotos</strong>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              {evidenceFiles.length > 0 ? `${evidenceFiles.length} foto(s) seleccionada(s)` : 'JPG, PNG o HEIC desde tu dispositivo'}
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              style={{ display: 'none' }}
+              onChange={event => setEvidenceFiles(Array.from(event.target.files ?? []))}
+            />
+          </label>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Kilometraje</span>
+              <input
+                inputMode="numeric"
+                value={kmReading}
+                onChange={event => setKmReading(event.target.value)}
+                placeholder="Ej. 45210"
+                style={{ padding: 12, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)' }}
+              />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Combustible %</span>
+              <input
+                inputMode="numeric"
+                value={fuelLevel}
+                onChange={event => setFuelLevel(event.target.value)}
+                placeholder="Ej. 80"
+                style={{ padding: 12, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)' }}
+              />
+            </label>
+          </div>
+
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Notas</span>
+            <textarea
+              value={notes}
+              onChange={event => setNotes(event.target.value)}
+              placeholder="Observaciones del estado del vehículo"
+              rows={3}
+              style={{ padding: 12, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', resize: 'vertical' }}
+            />
+          </label>
+
+          <button
+            onClick={() => uploadEvidence(trip.status === 'evidencia_inicial_pendiente' ? 'inicial' : 'final')}
+            disabled={uploadingEvidence}
+            style={{
+              padding: '12px 14px',
+              borderRadius: 10,
+              border: 0,
+              background: 'var(--primary)',
+              color: '#fff',
+              fontWeight: 700,
+              cursor: uploadingEvidence ? 'not-allowed' : 'pointer',
+              opacity: uploadingEvidence ? .7 : 1,
+            }}>
+            {uploadingEvidence ? 'Guardando evidencia…' : 'Guardar evidencia'}
+          </button>
+        </div>
+      )}
 
       {/* Acciones de estatus */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
