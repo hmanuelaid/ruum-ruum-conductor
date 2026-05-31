@@ -1,8 +1,10 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'  // ← agregar esto
 import { useAuthStore } from '@/lib/store'
 import { createClient } from '@/lib/supabase'
+
+
 
 const STATUS_LABELS: Record<string, string> = {
   conductor_asignado: 'Conductor asignado', conductor_en_camino: 'En camino al origen',
@@ -13,15 +15,20 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function PanelPage() {
   const router = useRouter()
-  const { driver, clearAuth } = useAuthStore()
+  const { driver, logout } = useAuthStore()  // ← cambiar clearAuth por logout
   const [trip, setTrip] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-
   useEffect(() => {
     if (!driver) return
     loadActiveTrip()
   }, [driver])
-
+// Función handleLogout - usar logout en lugar de clearAuth
+async function handleLogout() {
+  const supabase = createClient()
+  await supabase.auth.signOut()
+  logout()  // ← esto es correcto
+  router.push('/login')
+}
   async function loadActiveTrip() {
     setLoading(true)
     const supabase = createClient()
@@ -44,12 +51,6 @@ export default function PanelPage() {
     setTrip({ ...trip, status: newStatus })
   }
 
-  async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    clearAuth()
-    router.push('/login')
-  }
 
   if (loading) return (
     <div style={{ padding: 24 }}>
