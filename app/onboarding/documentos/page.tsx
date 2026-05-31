@@ -1,9 +1,11 @@
 'use client'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/store'
 import { useAppStore } from '@/lib/store'
 import { useDocuments } from '@/lib/useDocuments'
 import { DocumentUploader } from '@/components/ui/DocumentUploader'
+import { createClient } from '@/lib/supabase'
 
 const DRIVER_DOCS = [
   { docType: 'ine',          label: 'Identificación oficial (INE/Pasaporte)',    required: true  },
@@ -22,13 +24,104 @@ const SECTIONS = [
 
 export default function DocumentosPage() {
   const router = useRouter()
-  const { driver, completeOnboarding } = useAuthStore()
+  const { driver, setDriver, completeOnboarding } = useAuthStore()
   const { showToast } = useAppStore()
+  const [profileLoading, setProfileLoading] = useState(!driver)
+  const [profileError, setProfileError] = useState('')
 
-  const ownerId   = driver?.id   ?? 'temp_driver'
+  const ownerId   = driver?.id   ?? null
   const ownerName = driver?.name ?? 'Conductor'
 
   const { docs, loading, updateDoc } = useDocuments(ownerId, DRIVER_DOCS)
+
+  useEffect(() => {
+    if (driver) {
+      setProfileLoading(false)
+      return
+    }
+
+    async function createDriverProfile() {
+      setProfileLoading(true)
+      setProfileError('')
+
+      const raw = typeof window !== 'undefined' ? sessionStorage.getItem('reg_data') : null
+      const reg = raw ? JSON.parse(raw) as {
+        name?: string
+        phone?: string
+        email?: string
+        password?: string
+      } : null
+
+      if (!reg?.email || !reg.password || !reg.name) {
+        setProfileError('No encontramos los datos de registro. Vuelve a iniciar el registro.')
+        setProfileLoading(false)
+        return
+      }
+
+      const supabase = createClient()
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: reg.email,
+        password: reg.password,
+      })
+
+      if (signUpError) {
+        setProfileError(signUpError.message)
+        setProfileLoading(false)
+        return
+      }
+
+      if (!authData.user?.id) {
+        setProfileError('No se pudo crear la sesion del conductor.')
+        setProfileLoading(false)
+        return
+      }
+
+      const { data: existingDriver } = await supabase
+        .from('drivers')
+        .select('id, name, phone, email')
+        .eq('auth_id', authData.user.id)
+        .maybeSingle()
+
+      if (existingDriver) {
+        setDriver({
+          id: existingDriver.id,
+          name: existingDriver.name,
+          phone: existingDriver.phone ?? '',
+          email: existingDriver.email,
+        })
+        setProfileLoading(false)
+        return
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('drivers')
+        .insert({
+          auth_id: authData.user.id,
+          name: reg.name,
+          phone: reg.phone ?? '',
+          email: reg.email,
+          status: 'pendiente_validacion',
+        })
+        .select('id, name, phone, email')
+        .single()
+
+      if (profileError) {
+        setProfileError(`No se pudo crear el perfil de conductor: ${profileError.message}`)
+        setProfileLoading(false)
+        return
+      }
+
+      setDriver({
+        id: profile.id,
+        name: profile.name,
+        phone: profile.phone ?? '',
+        email: profile.email,
+      })
+      setProfileLoading(false)
+    }
+
+    void createDriverProfile()
+  }, [driver, setDriver])
 
   const requiredDocs      = docs.filter(d => d.required)
   const uploadedRequired  = requiredDocs.filter(
@@ -80,9 +173,28 @@ export default function DocumentosPage() {
           </div>
         )}
 
-        {loading ? (
+        {profileError && (
+          <div style={{
+            background: 'rgba(239,68,68,.08)',
+            border: '1px solid rgba(239,68,68,.25)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '12px 14px',
+            fontSize: 13,
+            color: 'var(--danger)',
+          }}>
+            {profileError}
+          </div>
+        )}
+
+        {profileLoading || loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
-            <p className="muted">Cargando documentos…</p>
+            <p className="muted">
+              {profileLoading ? 'Preparando tu perfil…' : 'Cargando documentos…'}
+            </p>
+          </div>
+        ) : !ownerId ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+            <p className="muted">Completa tu registro para subir documentos.</p>
           </div>
         ) : (
           SECTIONS.map(section => {
