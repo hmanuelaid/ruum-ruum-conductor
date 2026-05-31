@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'  // ← agregar esto
 import { useAuthStore } from '@/lib/store'
 import { createClient } from '@/lib/supabase'
+import CameraUpload from '@/components/ui/CameraUpload'
 
 
 
@@ -144,13 +145,13 @@ async function handleLogout() {
             <p style={{ fontWeight: 700, fontSize: 14 }}>Actualizar estatus</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[
-                { status: 'conductor_en_camino',        label: '🚗 En camino al origen' },
-                { status: 'recoleccion_proceso',         label: '📋 Recolección en proceso' },
-                { status: 'evidencia_inicial_pendiente', label: '📸 Cargar evidencia inicial' },
-                { status: 'traslado_curso',              label: '🛣️ Iniciar traslado' },
-                { status: 'entrega_proceso',             label: '📦 Entrega en proceso' },
-                { status: 'evidencia_final_pendiente',   label: '📸 Cargar evidencia final' },
-                { status: 'finalizado',                  label: '✅ Marcar como finalizado' },
+                { status: 'conductor_en_camino', label: '🚗 En camino al origen' },
+                { status: 'recoleccion_proceso', label: '📋 Recolección en proceso' },
+                { status: 'evidencia_inicial_pendiente', label: '📸 Subir evidencia inicial' },
+                { status: 'traslado_curso', label: '🛣️ Iniciar traslado' },
+                { status: 'entrega_proceso', label: '📦 Entrega en proceso' },
+                { status: 'evidencia_final_pendiente', label: '📸 Subir evidencia final' },
+                { status: 'finalizado', label: '✅ Marcar como finalizado' },
               ].map(({ status, label }) => (
                 <button key={status}
                   onClick={() => updateStatus(status)}
@@ -165,6 +166,24 @@ async function handleLogout() {
                 </button>
               ))}
             </div>
+
+            {trip.status === 'evidencia_inicial_pendiente' && (
+              <CameraUpload
+                tripId={trip.id}
+                driverId={driver!.id}
+                type="pickup"
+                onUploadComplete={() => updateStatus('traslado_curso')}
+              />
+            )}
+
+            {trip.status === 'evidencia_final_pendiente' && (
+              <CameraUpload
+                tripId={trip.id}
+                driverId={driver!.id}
+                type="delivery"
+                onUploadComplete={() => updateStatus('finalizado')}
+              />
+            )}
           </div>
 
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16 }}>
