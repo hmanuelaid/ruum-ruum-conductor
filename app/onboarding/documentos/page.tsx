@@ -35,10 +35,7 @@ export default function DocumentosPage() {
   const { docs, loading, updateDoc } = useDocuments(ownerId, DRIVER_DOCS)
 
   useEffect(() => {
-    if (driver) {
-      setProfileLoading(false)
-      return
-    }
+    if (driver) return
 
     async function createDriverProfile() {
       setProfileLoading(true)
@@ -59,18 +56,31 @@ export default function DocumentosPage() {
       }
 
       const supabase = createClient()
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      let authId: string | undefined
+
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: reg.email,
         password: reg.password,
       })
 
       if (signUpError) {
-        setProfileError(signUpError.message)
-        setProfileLoading(false)
-        return
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: reg.email,
+          password: reg.password,
+        })
+
+        if (signInError) {
+          setProfileError(signUpError.message)
+          setProfileLoading(false)
+          return
+        }
+
+        authId = signInData.user.id
+      } else {
+        authId = signUpData.user?.id
       }
 
-      if (!authData.user?.id) {
+      if (!authId) {
         setProfileError('No se pudo crear la sesion del conductor.')
         setProfileLoading(false)
         return
@@ -79,7 +89,7 @@ export default function DocumentosPage() {
       const { data: existingDriver } = await supabase
         .from('drivers')
         .select('id, name, phone, email')
-        .eq('auth_id', authData.user.id)
+        .eq('auth_id', authId)
         .maybeSingle()
 
       if (existingDriver) {
@@ -96,7 +106,7 @@ export default function DocumentosPage() {
       const { data: profile, error: profileError } = await supabase
         .from('drivers')
         .insert({
-          auth_id: authData.user.id,
+          auth_id: authId,
           name: reg.name,
           phone: reg.phone ?? '',
           email: reg.email,

@@ -1,43 +1,69 @@
-
-// ════════════════════════════════════════════════════════════════════
-// app/(driver)/docs/page.tsx
-// ════════════════════════════════════════════════════════════════════
+'use client'
+import { DocumentUploader } from '@/components/ui/DocumentUploader'
 import { Chip } from '@/components/ui/Chip'
-import { mockDocuments } from '@/lib/mock-data'
+import { useAuthStore } from '@/lib/store'
+import { useDocuments } from '@/lib/useDocuments'
 
-const STATUS_LABELS: Record<string, string> = {
-  approved: 'Aprobada', review: 'En revisión', pending: 'Pendiente de validación',
-}
-
-const pendingCount = (docs: typeof mockDocuments) => docs.filter(d => d.status === 'pending').length
+const DRIVER_DOCS = [
+  { docType: 'ine',          label: 'Identificacion oficial (INE/Pasaporte)',    required: true  },
+  { docType: 'licencia',     label: 'Licencia de conducir vigente',              required: true  },
+  { docType: 'comprobante',  label: 'Comprobante de domicilio',                  required: true  },
+  { docType: 'antecedentes', label: 'No antecedentes penales (ultimos 3 meses)', required: true  },
+  { docType: 'foto_perfil',  label: 'Foto de perfil (fondo blanco)',             required: true  },
+  { docType: 'curp',         label: 'CURP',                                      required: false },
+  { docType: 'rfc',          label: 'RFC con homoclave',                         required: false },
+]
 
 export default function DocsPage() {
-  const pending = pendingCount(mockDocuments)
+  const { driver } = useAuthStore()
+  const ownerId = driver?.id ?? null
+  const ownerName = driver?.name ?? 'Conductor'
+  const { docs, loading, updateDoc } = useDocuments(ownerId, DRIVER_DOCS)
+
+  const requiredDocs = docs.filter(doc => doc.required)
+  const completedRequired = requiredDocs.filter(doc =>
+    doc.status === 'en_revision' || doc.status === 'aprobado'
+  )
+  const pendingCount = requiredDocs.length - completedRequired.length
+
+  if (!ownerId) {
+    return (
+      <div className="stack">
+        <div className="section-head">
+          <h2>Documentos</h2>
+        </div>
+        <p className="muted">Inicia sesion para gestionar tus documentos.</p>
+      </div>
+    )
+  }
 
   return (
     <>
       <div className="section-head">
         <h2>Documentos</h2>
-        {pending > 0 && <Chip variant="warning">Pendientes</Chip>}
+        {pendingCount > 0 ? (
+          <Chip variant="warning">{pendingCount} pendientes</Chip>
+        ) : (
+          <Chip variant="success">Completos</Chip>
+        )}
       </div>
 
-      <div className="stack">
-        {mockDocuments.map(doc => (
-          <article key={doc.id} className={`document-row ${doc.status}`}>
-            <div>
-              <strong>{doc.name}</strong>
-              <span>{STATUS_LABELS[doc.status]}</span>
-            </div>
-            {doc.status === 'pending' ? (
-              <button className="btn-secondary" style={{ padding: '8px 14px', fontSize: 13 }}>Subir</button>
-            ) : (
-              <button className="btn-mini" aria-label={`Ver ${doc.name}`}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18 15 12 9 6"/></svg>
-              </button>
-            )}
-          </article>
-        ))}
-      </div>
+      {loading ? (
+        <p className="muted">Cargando documentos...</p>
+      ) : (
+        <div className="stack">
+          {docs.map(doc => (
+            <DocumentUploader
+              key={doc.docType}
+              doc={doc}
+              ownerId={ownerId}
+              ownerType="driver"
+              ownerName={ownerName}
+              onUploaded={updateDoc}
+            />
+          ))}
+        </div>
+      )}
     </>
   )
 }
