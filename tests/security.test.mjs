@@ -19,3 +19,13 @@ test('onboarding signup does not use SMS verification or store passwords', () =>
   assert.doesNotMatch(registration, /onboarding\/verificacion/)
   assert.doesNotMatch(registration, /driver_onboarding_draft|sessionStorage/i)
 })
+
+test('driver onboarding profile endpoint supports document step updates', () => {
+  const profileRoute = read('app/api/drivers/profile/route.ts')
+
+  assert.match(profileRoute, /export async function GET/)
+  assert.match(profileRoute, /export async function POST/)
+  assert.match(profileRoute, /export async function PATCH/)
+  assert.match(profileRoute, /onboarding_status/)
+  assert.match(profileRoute, /pendiente_validacion/)
+})

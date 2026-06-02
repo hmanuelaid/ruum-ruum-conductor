@@ -41,6 +41,7 @@ export async function POST(req: Request) {
   })
   if (fileError) return jsonError(fileError, 400)
 
+  const bytes = Buffer.from(await file.arrayBuffer())
   const safeOwnerType = ownerType === 'driver' ? 'driver' : 'user'
   const safeOwnerId = safePathPart(ownerId, 'owner')
   const safeDocType = safePathPart(docType, 'documento')
@@ -48,9 +49,11 @@ export async function POST(req: Request) {
 
   const { error: uploadError } = await auth.context.supabase.storage
     .from(DOCUMENTS_BUCKET)
-    .upload(path, file, { upsert: false, contentType: file.type })
+    .upload(path, bytes, { upsert: false, contentType: file.type })
 
-  if (uploadError) return jsonError('Could not upload document file.', 500)
+  if (uploadError) {
+    return jsonError(`Could not upload document file: ${uploadError.message}`, 500)
+  }
 
   const now = new Date().toISOString()
   const documentPayload = {

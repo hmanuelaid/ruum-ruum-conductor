@@ -89,7 +89,9 @@ try {
   await assertStatus('PATCH', '/api/trips/T-001245', 401, { status: 'finalizado' })
   await assertStatus('POST', '/api/documents/upload', 401)
   await assertStatus('POST', '/api/trips/T-001245/evidence', 401)
+  await assertStatus('GET', '/api/drivers/profile', 401)
   await assertStatus('POST', '/api/drivers/profile', 401, { name: 'Smoke Test' })
+  await assertStatus('PATCH', '/api/drivers/profile', 401, { onboarding_status: 'submitted' })
 } finally {
   await stopServer()
 }
