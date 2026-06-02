@@ -178,7 +178,7 @@ export default function DocumentosPage() {
       </button>
 
       <div className="onboarding-card" style={{ gap: '1.25rem', maxWidth: 440 }}>
-        <div className="step-badge">Paso 3 de 3</div>
+        <div className="step-badge">Paso 2 de 2</div>
 
         <div>
           <h1 className="onboarding-title">Documentación requerida</h1>

@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "npm run test:smoke",
+    "test": "npm run test:security && npm run test:smoke",
+    "test:security": "node --test tests/*.test.mjs",
     "test:smoke": "node scripts/smoke-routes.mjs",
     "audit:prod": "npm audit --omit=dev --audit-level=moderate"
   },
