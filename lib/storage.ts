@@ -1,9 +1,9 @@
-// lib/storage.ts
-import { createClient } from './supabase'
-
 export const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
 export const MAX_SIZE_MB = 10
 export const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
+export const EVIDENCE_ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+export const EVIDENCE_MAX_SIZE_MB = 5
+export const EVIDENCE_MAX_SIZE_BYTES = EVIDENCE_MAX_SIZE_MB * 1024 * 1024
 
 export function validateFile(file: File): string | null {
   if (!ACCEPTED_TYPES.includes(file.type)) {
@@ -23,42 +23,62 @@ export async function uploadDocument(params: {
   file: File
   ownerId: string
   ownerType: 'user' | 'driver'
+  ownerName: string
   docType: string
 }): Promise<{ url: string; path: string } | { error: string }> {
-  const { file, ownerId, ownerType, docType } = params
-  const supabase = createClient()
+  const formData = new FormData()
+  formData.set('file', params.file)
+  formData.set('ownerId', params.ownerId)
+  formData.set('ownerType', params.ownerType)
+  formData.set('ownerName', params.ownerName)
+  formData.set('docType', params.docType)
 
-  const ext  = file.name.split('.').pop()
-  const path = `${ownerType}/${ownerId}/${docType}_${Date.now()}.${ext}`
+  const response = await fetch('/api/documents/upload', {
+    method: 'POST',
+    body: formData,
+  })
 
-  const { error } = await supabase.storage
-    .from('documents')
-    .upload(path, file, { upsert: true, contentType: file.type })
+  const payload = await response.json().catch(() => null) as {
+    ok?: boolean
+    error?: string
+    data?: { url?: string; storage_path?: string }
+  } | null
 
-  if (error) return { error: error.message }
+  if (!response.ok || !payload?.ok || !payload.data?.storage_path) {
+    return { error: payload?.error ?? 'No se pudo subir el documento.' }
+  }
 
-  const { data } = supabase.storage.from('documents').getPublicUrl(path)
-  return { url: data.publicUrl, path }
+  return { url: payload.data.url ?? '', path: payload.data.storage_path }
 }
 
-export async function uploadEvidence(params: {
+export async function uploadTripEvidence(params: {
   file: File
   tripId: string
-  type: 'inicial' | 'final' | 'durante'
-  index: number
+  type: 'pickup' | 'delivery'
+  notes?: string
 }): Promise<{ url: string; path: string } | { error: string }> {
-  const { file, tripId, type, index } = params
-  const supabase = createClient()
+  const formData = new FormData()
+  formData.set('file', params.file)
+  formData.set('type', params.type)
+  if (params.notes) formData.set('notes', params.notes)
 
-  const ext  = file.name.split('.').pop()
-  const path = `${tripId}/${type}_${index}_${Date.now()}.${ext}`
+  const response = await fetch(`/api/trips/${encodeURIComponent(params.tripId)}/evidence`, {
+    method: 'POST',
+    body: formData,
+  })
 
-  const { error } = await supabase.storage
-    .from('evidence')
-    .upload(path, file, { upsert: true, contentType: file.type })
+  const payload = await response.json().catch(() => null) as {
+    ok?: boolean
+    error?: string
+    data?: { photo_url?: string; photo_storage_path?: string }
+  } | null
 
-  if (error) return { error: error.message }
+  if (!response.ok || !payload?.ok || !payload.data?.photo_storage_path) {
+    return { error: payload?.error ?? 'No se pudo subir la evidencia.' }
+  }
 
-  const { data } = supabase.storage.from('evidence').getPublicUrl(path)
-  return { url: data.publicUrl, path }
+  return {
+    url: payload.data.photo_url ?? '',
+    path: payload.data.photo_storage_path,
+  }
 }

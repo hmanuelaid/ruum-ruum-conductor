@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useAuthStore } from '@/lib/store'
-import { createClient } from '@/lib/supabase'
+import { useDriverProfile } from '@/lib/useDriverProfile'
 
 const STATUS_LABELS: Record<string, string> = {
   conductor_asignado: 'Asignado', conductor_en_camino: 'En camino',
@@ -29,38 +28,68 @@ interface DriverTrip {
   created_at: string
 }
 
+type TripsApiResponse =
+  | { ok: true; data: DriverTrip[] }
+  | { ok: false; error?: string }
+
 type Tab = 'Activos' | 'Finalizados' | 'Todos'
 
 const ACTIVE = ['conductor_asignado','conductor_en_camino','recoleccion_proceso',
   'evidencia_inicial_pendiente','traslado_curso','entrega_proceso','evidencia_final_pendiente']
 
 export default function ViajesPage() {
-  const { driver } = useAuthStore()
+  const { driver, loading: driverLoading } = useDriverProfile()
   const [tab, setTab] = useState<Tab>('Activos')
   const [trips, setTrips] = useState<DriverTrip[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!driver) return
-    loadTrips()
+    if (!driver) {
+      setTrips([])
+      setLoading(false)
+      setError('')
+      return
+    }
+
+    let cancelled = false
+
+    async function loadTrips() {
+      setLoading(true)
+      setError('')
+
+      try {
+        const response = await fetch('/api/trips', { cache: 'no-store' })
+        const payload = await response.json().catch(() => null) as TripsApiResponse | null
+
+        if (!response.ok || !payload?.ok) {
+          const errorMessage = payload && !payload.ok ? payload.error : null
+          throw new Error(errorMessage ?? 'No se pudieron cargar tus viajes.')
+        }
+
+        const filteredTrips = payload.data.filter(trip => {
+          if (tab === 'Activos') return ACTIVE.includes(trip.status)
+          if (tab === 'Finalizados') return trip.status === 'finalizado'
+          return true
+        })
+
+        if (!cancelled) setTrips(filteredTrips)
+      } catch (loadError) {
+        if (!cancelled) {
+          setTrips([])
+          setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar tus viajes.')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    void loadTrips()
+
+    return () => {
+      cancelled = true
+    }
   }, [driver, tab])
-
-  async function loadTrips() {
-    setLoading(true)
-    const supabase = createClient()
-    let query = supabase
-      .from('trips')
-      .select('id,status,vehicle_brand,vehicle_model,vehicle_plates,origin_address,destination_address,driver_pay_mxn,distance_km,created_at')
-      .eq('driver_id', driver!.id)
-      .order('created_at', { ascending: false })
-
-    if (tab === 'Activos')    query = query.in('status', ACTIVE)
-    if (tab === 'Finalizados') query = query.eq('status', 'finalizado')
-
-    const { data } = await query
-    setTrips((data ?? []) as DriverTrip[])
-    setLoading(false)
-  }
 
   return (
     <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -79,8 +108,10 @@ export default function ViajesPage() {
         ))}
       </div>
 
-      {loading ? (
+      {driverLoading || loading ? (
         <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 24 }}>Cargando viajes…</p>
+      ) : error ? (
+        <div className="card" style={{ color: 'var(--danger)' }}>{error}</div>
       ) : trips.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '32px 16px' }}>
           <p style={{ fontSize: 28, marginBottom: 8 }}>🚗</p>

@@ -1,6 +1,5 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Chip } from '@/components/ui/Chip'  // ← asegurar import
 import { createClient } from '@/lib/supabase'
 
 interface Driver {
@@ -30,9 +29,6 @@ export default function ConductoresPage() {
       .from('drivers')
       .select('*')
       .order('created_at', { ascending: false })
-    
-    console.log('Drivers data:', data)  // ← ver en consola
-    console.log('Error:', error)
     
     setDrivers(data ?? [])
     setLoading(false)

@@ -3,7 +3,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Trip } from './types'
 
-interface Driver {
+export interface Driver {
   id: string
   name: string
   phone: string
@@ -45,7 +45,23 @@ export const useAuthStore = create<AuthState>()(
       logout: () => set({ driver: null, isAuthenticated: false }),
       completeOnboarding: () => set({ firstLaunch: false, onboardingComplete: true }),
     }),
-    { name: 'ruum-auth' }
+    {
+      name: 'ruum-auth',
+      version: 2,
+      partialize: (state) => ({
+        firstLaunch: state.firstLaunch,
+        onboardingComplete: state.onboardingComplete,
+      }),
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<AuthState> | undefined
+        return {
+          driver: null,
+          isAuthenticated: false,
+          firstLaunch: state?.firstLaunch ?? true,
+          onboardingComplete: state?.onboardingComplete ?? false,
+        }
+      },
+    }
   )
 )
 

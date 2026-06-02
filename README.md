@@ -37,13 +37,19 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Environment
 
-Copy `.env.example` to `.env.local` and fill the values before running locally. Required variables used by this project:
+Copy `.env.example` to `.env.local` in the repository root and fill the values before running locally.
 
-- `BASIC_AUTH_USER` — user for basic middleware auth (development)
-- `BASIC_AUTH_PASS` — password for basic middleware auth (development)
-- `NEXT_PUBLIC_SUPABASE_URL` — your Supabase public URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — your Supabase anon key
+Required variables used by the app:
 
-DO NOT commit `.env.local` to the repository. This repo contained a committed `.env.local` with keys; those have been removed from the working tree. If any credentials were exposed, rotate them immediately (Supabase anon keys and any other secrets).
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL.
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon key used by browser, middleware and server clients.
 
-CI: a minimal GitHub Actions workflow runs `npm run lint` and `npm run typecheck` on pushes and PRs (see `.github/workflows/ci.yml`).
+Do not create per-app env files such as `app/.env.local`; Next reads env files from the project root. Keep `.env.local` out of Git. If any local value was ever committed or shared, rotate it in the provider dashboard before deploying.
+
+CI runs `npm ci`, `npm run lint`, `npm run typecheck`, `npm run build`, `npm run audit:prod` and `npm test` on pushes and PRs. The route smoke test uses dummy Supabase env values only to verify unauthenticated route behavior.
+
+## Dependency Policy
+
+Apply patch/minor upgrades first and verify them with lint, typecheck, build, production audit and smoke tests. Major upgrades such as Next 16 should be handled in a dedicated migration branch.
+
+`package.json` currently overrides Next's nested `postcss` to `8.5.10` so `npm run audit:prod` can enforce the moderate production-audit threshold without downgrading Next.

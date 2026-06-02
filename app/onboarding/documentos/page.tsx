@@ -22,6 +22,10 @@ const SECTIONS = [
   { title: '📄 Documentos fiscales (opcionales)', docs: ['curp','rfc'] },
 ]
 
+type DriverProfileResponse =
+  | { ok: true; data: { id: string; name: string; phone?: string | null; email: string } }
+  | { ok: false; error?: string }
+
 export default function DocumentosPage() {
   const router = useRouter()
   const { driver, setDriver, completeOnboarding } = useAuthStore()
@@ -56,7 +60,6 @@ export default function DocumentosPage() {
       }
 
       const supabase = createClient()
-      let authId: string | undefined
 
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: reg.email,
@@ -64,7 +67,7 @@ export default function DocumentosPage() {
       })
 
       if (signUpError) {
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        const { error: signInError } = await supabase.auth.signInWithPassword({
           email: reg.email,
           password: reg.password,
         })
@@ -74,58 +77,37 @@ export default function DocumentosPage() {
           setProfileLoading(false)
           return
         }
-
-        authId = signInData.user.id
-      } else {
-        authId = signUpData.user?.id
       }
 
-      if (!authId) {
+      if (!signUpError && !signUpData.user) {
         setProfileError('No se pudo crear la sesion del conductor.')
         setProfileLoading(false)
         return
       }
 
-      const { data: existingDriver } = await supabase
-        .from('drivers')
-        .select('id, name, phone, email')
-        .eq('auth_id', authId)
-        .maybeSingle()
-
-      if (existingDriver) {
-        setDriver({
-          id: existingDriver.id,
-          name: existingDriver.name,
-          phone: existingDriver.phone ?? '',
-          email: existingDriver.email,
-        })
-        setProfileLoading(false)
-        return
-      }
-
-      const { data: profile, error: profileError } = await supabase
-        .from('drivers')
-        .insert({
-          auth_id: authId,
+      const profileResponse = await fetch('/api/drivers/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: reg.name,
           phone: reg.phone ?? '',
           email: reg.email,
-          status: 'pendiente_validacion',
-        })
-        .select('id, name, phone, email')
-        .single()
+        }),
+      })
+      const profilePayload = await profileResponse.json().catch(() => null) as DriverProfileResponse | null
 
-      if (profileError) {
-        setProfileError(`No se pudo crear el perfil de conductor: ${profileError.message}`)
+      if (!profileResponse.ok || !profilePayload?.ok) {
+        const errorMessage = profilePayload && !profilePayload.ok ? profilePayload.error : null
+        setProfileError(errorMessage ?? 'No se pudo crear el perfil de conductor.')
         setProfileLoading(false)
         return
       }
 
       setDriver({
-        id: profile.id,
-        name: profile.name,
-        phone: profile.phone ?? '',
-        email: profile.email,
+        id: profilePayload.data.id,
+        name: profilePayload.data.name,
+        phone: profilePayload.data.phone ?? '',
+        email: profilePayload.data.email,
       })
       setProfileLoading(false)
     }

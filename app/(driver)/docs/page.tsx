@@ -1,8 +1,8 @@
 'use client'
 import { DocumentUploader } from '@/components/ui/DocumentUploader'
 import { Chip } from '@/components/ui/Chip'
-import { useAuthStore } from '@/lib/store'
 import { useDocuments } from '@/lib/useDocuments'
+import { useDriverProfile } from '@/lib/useDriverProfile'
 
 const DRIVER_DOCS = [
   { docType: 'ine',          label: 'Identificacion oficial (INE/Pasaporte)',    required: true  },
@@ -15,7 +15,7 @@ const DRIVER_DOCS = [
 ]
 
 export default function DocsPage() {
-  const { driver } = useAuthStore()
+  const { driver, loading: driverLoading } = useDriverProfile()
   const ownerId = driver?.id ?? null
   const ownerName = driver?.name ?? 'Conductor'
   const { docs, loading, updateDoc } = useDocuments(ownerId, DRIVER_DOCS)
@@ -26,14 +26,13 @@ export default function DocsPage() {
   )
   const pendingCount = requiredDocs.length - completedRequired.length
 
+  if (driverLoading) {
+    return <p className="muted">Cargando documentos...</p>
+  }
+
   if (!ownerId) {
     return (
-      <div className="stack">
-        <div className="section-head">
-          <h2>Documentos</h2>
-        </div>
-        <p className="muted">Inicia sesion para gestionar tus documentos.</p>
-      </div>
+      null
     )
   }
 

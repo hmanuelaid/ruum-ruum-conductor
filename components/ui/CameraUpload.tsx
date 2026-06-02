@@ -1,15 +1,19 @@
 'use client'
 import { useState, useRef } from 'react'
-import { createClient } from '@/lib/supabase'
+import {
+  EVIDENCE_ACCEPTED_TYPES,
+  EVIDENCE_MAX_SIZE_BYTES,
+  EVIDENCE_MAX_SIZE_MB,
+  uploadTripEvidence,
+} from '@/lib/storage'
 
 interface CameraUploadProps {
   tripId: string
-  driverId: string
   type: 'pickup' | 'delivery'
   onUploadComplete: () => void
 }
 
-export default function CameraUpload({ tripId, driverId, type, onUploadComplete }: CameraUploadProps) {
+export default function CameraUpload({ tripId, type, onUploadComplete }: CameraUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
@@ -19,12 +23,12 @@ export default function CameraUpload({ tripId, driverId, type, onUploadComplete 
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('La foto no puede superar 5MB')
+    if (file.size > EVIDENCE_MAX_SIZE_BYTES) {
+      alert(`La foto no puede superar ${EVIDENCE_MAX_SIZE_MB}MB`)
       return
     }
 
-    if (!file.type.startsWith('image/')) {
+    if (!EVIDENCE_ACCEPTED_TYPES.includes(file.type)) {
       alert('Solo se permiten imágenes')
       return
     }
@@ -36,34 +40,16 @@ export default function CameraUpload({ tripId, driverId, type, onUploadComplete 
 
   async function uploadPhoto(file: File) {
     setUploading(true)
-    const supabase = createClient()
 
     try {
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${tripId}/${type}_${Date.now()}.${fileExt}`
-      
-      const { error: storageError } = await supabase.storage
-        .from('trip-evidence')
-        .upload(fileName, file)
+      const result = await uploadTripEvidence({
+        file,
+        tripId,
+        type,
+        notes,
+      })
 
-      if (storageError) throw storageError
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('trip-evidence')
-        .getPublicUrl(fileName)
-
-      const { error: dbError } = await supabase
-        .from('trip_evidence')
-        .insert({
-          trip_id: tripId,
-          driver_id: driverId,
-          type: type,
-          photo_url: publicUrl,
-          photo_storage_path: fileName,
-          notes: notes || null
-        })
-
-      if (dbError) throw dbError
+      if ('error' in result) throw new Error(result.error)
 
       alert(`✅ Evidencia de ${type === 'pickup' ? 'recogida' : 'entrega'} guardada`)
       onUploadComplete()
@@ -156,7 +142,7 @@ export default function CameraUpload({ tripId, driverId, type, onUploadComplete 
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept={EVIDENCE_ACCEPTED_TYPES.join(',')}
         capture="environment"
         onChange={handleFileSelect}
         style={{ display: 'none' }}

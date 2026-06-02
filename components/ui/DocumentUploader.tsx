@@ -1,27 +1,15 @@
 'use client'
 import { useState, useRef } from 'react'
 import { validateFile, getPreviewUrl, uploadDocument, ACCEPTED_TYPES, MAX_SIZE_MB } from '@/lib/storage'
-import { createClient } from '@/lib/supabase'
+import {
+  DOCUMENT_STATUS_CONFIG,
+  normalizeDocumentStatus,
+  type DocumentItem,
+  type DocumentStatus,
+} from '@/lib/document-contract'
 
-export type DocStatus = 'pendiente_carga' | 'en_revision' | 'aprobado' | 'rechazado' | 'vencido'
-
-export interface DocumentItem {
-  id?: string
-  docType: string
-  label: string
-  required: boolean
-  status: DocStatus
-  url?: string
-  notes?: string
-}
-
-const STATUS_CONFIG: Record<DocStatus, { label: string; color: string; emoji: string }> = {
-  pendiente_carga:  { label: 'Pendiente',    color: 'var(--text-muted)', emoji: '📎' },
-  en_revision:      { label: 'En revisión',  color: 'var(--warning)',    emoji: '🔍' },
-  aprobado:         { label: 'Aprobado',     color: 'var(--success)',    emoji: '✅' },
-  rechazado:        { label: 'Rechazado',    color: 'var(--danger)',     emoji: '❌' },
-  vencido:          { label: 'Vencido',      color: 'var(--danger)',     emoji: '⚠️' },
-}
+export type { DocumentItem }
+export type DocStatus = DocumentStatus
 
 interface Props {
   doc: DocumentItem
@@ -32,13 +20,13 @@ interface Props {
 }
 
 export function DocumentUploader({ doc, ownerId, ownerType, ownerName, onUploaded }: Props) {
-  const [status, setStatus]       = useState<DocStatus>(doc.status)
+  const [status, setStatus]       = useState<DocumentStatus>(() => normalizeDocumentStatus(doc.status))
   const [preview, setPreview]     = useState<string | null>(doc.url ?? null)
   const [fileType, setFileType]   = useState<string>('')
   const [error, setError]         = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const inputRef                  = useRef<HTMLInputElement>(null)
-  const cfg                       = STATUS_CONFIG[status]
+  const cfg                       = DOCUMENT_STATUS_CONFIG[status]
 
   async function handleFile(file: File) {
     setError(null)
@@ -50,58 +38,17 @@ export function DocumentUploader({ doc, ownerId, ownerType, ownerName, onUploade
     setUploading(true)
 
     const result = await uploadDocument({
-      file, ownerId, ownerType, docType: doc.docType,
+      file,
+      ownerId,
+      ownerType,
+      ownerName,
+      docType: doc.docType,
     })
 
     if ('error' in result) {
       setError(result.error)
       setUploading(false)
       return
-    }
-
-    const supabase = createClient()
-    const { data: existing, error: lookupError } = await supabase
-      .from('documents')
-      .select('id')
-      .eq('owner_id', ownerId)
-      .eq('type', doc.docType)
-      .maybeSingle()
-
-    if (lookupError) {
-      setError(`No se pudo consultar el documento: ${lookupError.message}`)
-      setUploading(false)
-      return
-    }
-
-    if (existing) {
-      const { error: updateError } = await supabase.from('documents').update({
-        status: 'en_revision',
-        url: result.url,
-        uploaded_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }).eq('id', existing.id)
-
-      if (updateError) {
-        setError(`El archivo subio, pero no se actualizo el registro: ${updateError.message}`)
-        setUploading(false)
-        return
-      }
-    } else {
-      const { error: insertError } = await supabase.from('documents').insert({
-        owner_id:   ownerId,
-        owner_type: ownerType,
-        owner_name: ownerName,
-        type:       doc.docType,
-        status:     'en_revision',
-        url:        result.url,
-        uploaded_at: new Date().toISOString(),
-      })
-
-      if (insertError) {
-        setError(`El archivo subio, pero no se registro para revision: ${insertError.message}`)
-        setUploading(false)
-        return
-      }
     }
 
     setStatus('en_revision')

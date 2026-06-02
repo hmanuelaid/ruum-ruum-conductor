@@ -1,11 +1,39 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'  // ← agregar esto
+import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/store'
 import { createClient } from '@/lib/supabase'
+import { useDriverProfile } from '@/lib/useDriverProfile'
 import CameraUpload from '@/components/ui/CameraUpload'
 
+interface ActiveTrip {
+  id: string
+  status: string
+  origin_address: string | null
+  origin_reference: string | null
+  origin_contact_name: string | null
+  origin_contact_phone: string | null
+  destination_address: string | null
+  destination_reference: string | null
+  dest_contact_name: string | null
+  dest_contact_phone: string | null
+  vehicle_brand: string | null
+  vehicle_model: string | null
+  vehicle_year: number | null
+  vehicle_color: string | null
+  vehicle_plates: string | null
+  vehicle_condition: string | null
+  driver_pay_mxn: number | null
+  distance_km: number | null
+}
 
+type TripsApiResponse =
+  | { ok: true; data: ActiveTrip[] }
+  | { ok: false; error?: string }
+
+type TripApiResponse =
+  | { ok: true; data: ActiveTrip }
+  | { ok: false; error?: string }
 
 const STATUS_LABELS: Record<string, string> = {
   conductor_asignado: 'Conductor asignado', conductor_en_camino: 'En camino al origen',
@@ -16,48 +44,102 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function PanelPage() {
   const router = useRouter()
-  const { driver, logout } = useAuthStore()  // ← cambiar clearAuth por logout
-  const [trip, setTrip] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const { logout } = useAuthStore()
+  const { driver, loading: driverLoading } = useDriverProfile()
+  const [trip, setTrip] = useState<ActiveTrip | null>(null)
+  const [tripLoading, setTripLoading] = useState(false)
+  const [tripError, setTripError] = useState('')
+  const [statusError, setStatusError] = useState('')
+
   useEffect(() => {
-    if (!driver) return
-    loadActiveTrip()
+    if (!driver) {
+      setTrip(null)
+      setTripLoading(false)
+      setTripError('')
+      return
+    }
+
+    let cancelled = false
+
+    async function loadActiveTrip() {
+      setTripLoading(true)
+      setTripError('')
+
+      try {
+        const response = await fetch('/api/trips', { cache: 'no-store' })
+        const payload = await response.json().catch(() => null) as TripsApiResponse | null
+
+        if (!response.ok || !payload?.ok) {
+          const errorMessage = payload && !payload.ok ? payload.error : null
+          throw new Error(errorMessage ?? 'No se pudo cargar el viaje activo.')
+        }
+
+        const activeTrip = payload.data.find(item => item.status !== 'finalizado' && item.status !== 'cancelado') ?? null
+
+        if (!cancelled) setTrip(activeTrip)
+      } catch (loadError) {
+        if (!cancelled) {
+          setTrip(null)
+          setTripError(loadError instanceof Error ? loadError.message : 'No se pudo cargar el viaje activo.')
+        }
+      } finally {
+        if (!cancelled) setTripLoading(false)
+      }
+    }
+
+    void loadActiveTrip()
+
+    return () => {
+      cancelled = true
+    }
   }, [driver])
-// Función handleLogout - usar logout en lugar de clearAuth
-async function handleLogout() {
-  const supabase = createClient()
-  await supabase.auth.signOut()
-  logout()  // ← esto es correcto
-  router.push('/login')
-}
-  async function loadActiveTrip() {
-    setLoading(true)
+
+  async function handleLogout() {
     const supabase = createClient()
-    const { data } = await supabase
-      .from('trips')
-      .select('*')
-      .eq('driver_id', driver!.id)
-      .not('status', 'in', '("finalizado","cancelado")')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    setTrip(data)
-    setLoading(false)
+    await supabase.auth.signOut()
+    logout()
+    router.push('/login')
   }
 
   async function updateStatus(newStatus: string) {
-    if (!trip) return
-    const supabase = createClient()
-    await supabase.from('trips').update({ status: newStatus }).eq('id', trip.id)
-    setTrip({ ...trip, status: newStatus })
+    if (!driver || !trip) return
+    setStatusError('')
+
+    try {
+      const response = await fetch(`/api/trips/${encodeURIComponent(trip.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      const payload = await response.json().catch(() => null) as TripApiResponse | null
+
+      if (!response.ok || !payload?.ok) {
+        const errorMessage = payload && !payload.ok ? payload.error : null
+        throw new Error(errorMessage ?? 'No se pudo actualizar el estatus.')
+      }
+
+      setTrip(payload.data)
+    } catch (updateError) {
+      setStatusError(updateError instanceof Error ? updateError.message : 'No se pudo actualizar el estatus.')
+    }
   }
 
 
-  if (loading) return (
+  if (driverLoading || tripLoading) return (
     <div style={{ padding: 24 }}>
       <p style={{ color: 'var(--text-muted)' }}>Cargando viaje activo…</p>
     </div>
   )
+
+  if (!driver) return null
+
+  if (tripError) {
+    return (
+      <div style={{ padding: 20 }}>
+        <div className="card" style={{ color: 'var(--danger)' }}>{tripError}</div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -143,6 +225,9 @@ async function handleLogout() {
 
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <p style={{ fontWeight: 700, fontSize: 14 }}>Actualizar estatus</p>
+            {statusError && (
+              <p style={{ color: 'var(--danger)', fontSize: 12 }}>{statusError}</p>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[
                 { status: 'conductor_en_camino', label: '🚗 En camino al origen' },
@@ -170,7 +255,6 @@ async function handleLogout() {
             {trip.status === 'evidencia_inicial_pendiente' && (
               <CameraUpload
                 tripId={trip.id}
-                driverId={driver!.id}
                 type="pickup"
                 onUploadComplete={() => updateStatus('traslado_curso')}
               />
@@ -179,7 +263,6 @@ async function handleLogout() {
             {trip.status === 'evidencia_final_pendiente' && (
               <CameraUpload
                 tripId={trip.id}
-                driverId={driver!.id}
                 type="delivery"
                 onUploadComplete={() => updateStatus('finalizado')}
               />

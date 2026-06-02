@@ -1,23 +1,22 @@
-'use client'
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/lib/store'
+import { redirect } from 'next/navigation'
+import { hasAdminAccess, hasDriverAccess } from '@/lib/auth-guards'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
-export default function Home() {
-  const router = useRouter()
-  const { isAuthenticated, firstLaunch, onboardingComplete } = useAuthStore()
+export default async function Home() {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      if (firstLaunch && !onboardingComplete) {
-        router.replace('/onboarding')
-      } else {
-        router.replace('/login')
-      }
-    } else {
-      router.replace('/panel')
-    }
-  }, [isAuthenticated, firstLaunch, onboardingComplete, router])
+  if (error || !user) {
+    redirect('/login')
+  }
 
-  return null
+  if (await hasDriverAccess(supabase, user)) {
+    redirect('/panel')
+  }
+
+  if (await hasAdminAccess(supabase, user)) {
+    redirect('/conductores')
+  }
+
+  redirect('/sin-acceso')
 }

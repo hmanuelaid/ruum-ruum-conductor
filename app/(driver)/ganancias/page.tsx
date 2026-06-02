@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useAuthStore } from '@/lib/store'
-import { createClient } from '@/lib/supabase'
+import { useDriverProfile } from '@/lib/useDriverProfile'
 
 interface EarningRow {
   id: string
@@ -13,27 +12,56 @@ interface EarningRow {
   created_at: string
 }
 
+type TripsApiResponse =
+  | { ok: true; data: EarningRow[] }
+  | { ok: false; error?: string }
+
 export default function GananciasPage() {
-  const { driver } = useAuthStore()
+  const { driver, loading: driverLoading } = useDriverProfile()
   const [trips, setTrips] = useState<EarningRow[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!driver) return
-    loadEarnings()
+    if (!driver) {
+      setTrips([])
+      setLoading(false)
+      setError('')
+      return
+    }
+
+    let cancelled = false
+
+    async function loadEarnings() {
+      setLoading(true)
+      setError('')
+
+      try {
+        const response = await fetch('/api/trips', { cache: 'no-store' })
+        const payload = await response.json().catch(() => null) as TripsApiResponse | null
+
+        if (!response.ok || !payload?.ok) {
+          const errorMessage = payload && !payload.ok ? payload.error : null
+          throw new Error(errorMessage ?? 'No se pudieron cargar tus ganancias.')
+        }
+
+        if (!cancelled) setTrips(payload.data)
+      } catch (loadError) {
+        if (!cancelled) {
+          setTrips([])
+          setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar tus ganancias.')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    void loadEarnings()
+
+    return () => {
+      cancelled = true
+    }
   }, [driver])
-
-  async function loadEarnings() {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('trips')
-      .select('id,driver_pay_mxn,distance_km,status,origin_address,destination_address,created_at')
-      .eq('driver_id', driver!.id)
-      .order('created_at', { ascending: false })
-
-    setTrips((data ?? []) as EarningRow[])
-    setLoading(false)
-  }
 
   const finalizados = trips.filter(t => t.status === 'finalizado')
   const totalGanado = finalizados.reduce((s, t) => s + Number(t.driver_pay_mxn ?? 0), 0)
@@ -48,8 +76,10 @@ export default function GananciasPage() {
     <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
       <h1 style={{ fontSize: 20, fontWeight: 800 }}>Ganancias</h1>
 
-      {loading ? (
+      {driverLoading || loading ? (
         <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 24 }}>Cargando…</p>
+      ) : error ? (
+        <div className="card" style={{ color: 'var(--danger)' }}>{error}</div>
       ) : (
         <>
           {/* Métricas */}

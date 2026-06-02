@@ -2,7 +2,26 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from './supabase'
-import type { DocStatus, DocumentItem } from '@/components/ui/DocumentUploader'
+import {
+  normalizeDocumentStatus,
+  normalizeDocumentUrl,
+  type DocumentItem,
+} from '@/lib/document-contract'
+
+type DocumentRow = {
+  id?: string
+  type?: string
+  owner_id?: string
+  status?: unknown
+  url?: unknown
+  file_url?: unknown
+  storage_path?: unknown
+  notes?: unknown
+}
+
+type DocumentsApiResponse =
+  | { ok: true; data: DocumentRow[] }
+  | { ok: false; error?: string }
 
 export function useDocuments(ownerId: string | null, docTypes: { docType: string; label: string; required: boolean }[]) {
   const [docs, setDocs]       = useState<DocumentItem[]>([])
@@ -18,26 +37,34 @@ export function useDocuments(ownerId: string | null, docTypes: { docType: string
     }
 
     const supabase = createClient()
-    supabase
-      .from('documents')
-      .select('*')
-      .eq('owner_id', ownerId)
-      .then(({ data }) => {
-        const merged = docTypes.map(dt => {
-          const found = data?.find(d => d.type === dt.docType)
-          return {
-            id:       found?.id,
-            docType:  dt.docType,
-            label:    dt.label,
-            required: dt.required,
-            status:   (found?.status ?? 'pendiente_carga') as DocStatus,
-            url:      found?.url ?? undefined,
-            notes:    found?.notes ?? undefined,
-          }
-        })
-        setDocs(merged)
-        setLoading(false)
+    async function loadDocuments() {
+      let data: DocumentRow[] = []
+
+      try {
+        const response = await fetch('/api/documents', { cache: 'no-store' })
+        const payload = await response.json().catch(() => null) as DocumentsApiResponse | null
+        data = response.ok && payload?.ok ? payload.data : []
+      } catch {
+        data = []
+      }
+
+      const merged = docTypes.map(dt => {
+        const found = data.find(d => d.type === dt.docType && String(d.owner_id ?? '') === ownerId)
+        return {
+          id:       found?.id,
+          docType:  dt.docType,
+          label:    dt.label,
+          required: dt.required,
+          status:   normalizeDocumentStatus(found?.status),
+          url:      normalizeDocumentUrl(found),
+          notes:    typeof found?.notes === 'string' ? found.notes : undefined,
+        }
       })
+      setDocs(merged)
+      setLoading(false)
+    }
+
+    void loadDocuments()
 
     // Realtime
     const channel = supabase
@@ -45,15 +72,7 @@ export function useDocuments(ownerId: string | null, docTypes: { docType: string
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'documents',
         filter: `owner_id=eq.${ownerId}`,
-      }, payload => {
-        setDocs(prev => prev.map(d => {
-          const updated = payload.new as { type: string; status: DocStatus; url: string; notes: string }
-          if (d.docType === updated.type) {
-            return { ...d, status: updated.status, url: updated.url, notes: updated.notes }
-          }
-          return d
-        }))
-      })
+      }, () => void loadDocuments())
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }

@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: smoke-test-anon-key
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js
@@ -22,3 +25,9 @@ jobs:
         run: npm run lint
       - name: Run TypeScript typecheck
         run: npm run typecheck
+      - name: Build application
+        run: npm run build
+      - name: Run production dependency audit
+        run: npm run audit:prod
+      - name: Run route smoke tests
+        run: npm test
