@@ -5,6 +5,8 @@ export type ValidationResult<T> =
   | { ok: false; error: string }
 
 const TRIP_STATUSES = new Set([
+  'ofertado',
+  'pendiente_asignacion',
   'conductor_asignado',
   'conductor_en_camino',
   'recoleccion_proceso',
