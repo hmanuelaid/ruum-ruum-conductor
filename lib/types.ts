@@ -28,7 +28,7 @@ export interface Trip {
 }
 
 // ─── Earnings ─────────────────────────────────────────────────────────────────
-export type MovementType = 'trip' | 'bonus' | 'deposit'
+export type MovementType = 'trip' | 'bonus' | 'deposit' | 'adjustment' | 'expense'
 
 export interface Movement {
   id: string
@@ -36,16 +36,72 @@ export interface Movement {
   label: string
   sublabel: string
   dateLabel: string
-  amountMXN: number // negative = outgoing
+  amountMXN: number // negative = outgoing/expense
+}
+
+export interface WeekSummary {
+  weekLabel: string        // e.g. "02 Jun – 08 Jun"
+  weekStart: string        // ISO date
+  tripsCount: number
+  grossMXN: number         // total earned from trips
+  expensesMXN: number      // authorized expenses (negative)
+  adjustmentsMXN: number   // bonuses or deductions
+  netMXN: number           // gross + adjustments - expenses
+  payoutStatus: 'pendiente' | 'procesando' | 'depositado'
+  payoutDateLabel: string  // e.g. "Vie 13 Jun · 14:00–18:00"
 }
 
 export interface EarningsSummary {
   availableMXN: number
+  totalLifetimeMXN: number
   payoutDay: string
   weekTrips: number
   weekEarningsMXN: number
+  weekExpensesMXN: number
+  weekAdjustmentsMXN: number
+  weekNetMXN: number
   nextPayoutLabel: string
+  nextPayoutDateISO: string
+  totalKm: number
   movements: Movement[]
+  weekHistory: WeekSummary[]
+}
+
+// ─── Trip Detail (viaje aceptado con datos completos) ─────────────────────────
+export type TripFlowStatus =
+  | 'conductor_asignado'
+  | 'conductor_en_camino'
+  | 'recoleccion_proceso'
+  | 'evidencia_inicial_pendiente'
+  | 'traslado_curso'
+  | 'entrega_proceso'
+  | 'evidencia_final_pendiente'
+  | 'finalizado'
+  | 'cancelado'
+
+export interface TripDetail {
+  id: string
+  status: TripFlowStatus
+  driver_id: string | null
+  vehicle_brand: string | null
+  vehicle_model: string | null
+  vehicle_year: number | null
+  vehicle_color: string | null
+  vehicle_plates: string | null
+  vehicle_condition: string | null
+  origin_address: string | null
+  origin_reference: string | null
+  origin_contact_name: string | null
+  origin_contact_phone: string | null
+  destination_address: string | null
+  destination_reference: string | null
+  dest_contact_name: string | null
+  dest_contact_phone: string | null
+  driver_pay_mxn: number | null
+  distance_km: number | null
+  created_at: string
+  has_pickup_evidence?: boolean
+  has_delivery_evidence?: boolean
 }
 
 // ─── Documents ────────────────────────────────────────────────────────────────

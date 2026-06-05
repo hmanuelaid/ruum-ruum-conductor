@@ -1,8 +1,10 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useDriverProfile } from '@/lib/useDriverProfile'
+import TripFlowSheet from '@/components/trip/TripFlowSheet'
+import type { TripDetail } from '@/lib/types'
 
-// ── Tipos ────────────────────────────────────────────────────────────────────
+// ── Tipos locales ─────────────────────────────────────────────────────────────
 
 interface OfferedTrip {
   id: string
@@ -12,16 +14,16 @@ interface OfferedTrip {
   vehicle_year: number | null
   vehicle_color: string | null
   vehicle_plates: string | null
-  vehicle_transmission: string | null
+  vehicle_transmission?: string | null
   origin_address: string | null
   origin_reference: string | null
   destination_address: string | null
   destination_reference: string | null
   driver_pay_mxn: number | null
   distance_km: number | null
-  scheduled_at: string | null
-  service_type: string | null
-  special_instructions: string | null
+  scheduled_at?: string | null
+  service_type?: string | null
+  special_instructions?: string | null
 }
 
 interface AssignedTrip {
@@ -39,13 +41,9 @@ interface AssignedTrip {
 
 type Tab = 'Solicitados' | 'Aceptados' | 'Finalizados'
 
-type OfferedApiResponse =
-  | { ok: true; data: OfferedTrip[] }
-  | { ok: false; error?: string }
-
-type AssignedApiResponse =
-  | { ok: true; data: AssignedTrip[] }
-  | { ok: false; error?: string }
+type OfferedApiResponse  = { ok: true; data: OfferedTrip[] } | { ok: false; error?: string }
+type AssignedApiResponse = { ok: true; data: AssignedTrip[] } | { ok: false; error?: string }
+type TripDetailResponse  = { ok: true; data: TripDetail }   | { ok: false; error?: string }
 
 const ACTIVE_STATUSES = new Set([
   'conductor_asignado', 'conductor_en_camino', 'recoleccion_proceso',
@@ -66,19 +64,21 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  conductor_asignado: 'var(--primary)',
-  traslado_curso:     'var(--accent)',
-  finalizado:         'var(--success)',
-  cancelado:          'var(--danger)',
+  conductor_asignado:          'var(--primary)',
+  conductor_en_camino:         'var(--accent)',
+  recoleccion_proceso:         'var(--warning)',
+  evidencia_inicial_pendiente: 'var(--warning)',
+  traslado_curso:              'var(--accent)',
+  entrega_proceso:             'var(--warning)',
+  evidencia_final_pendiente:   'var(--warning)',
+  finalizado:                  'var(--success)',
+  cancelado:                   'var(--danger)',
 }
 
-// ── Componente: Card de viaje ofertado ───────────────────────────────────────
+// ── Card: viaje ofertado ──────────────────────────────────────────────────────
 
 function OfferedTripCard({
-  trip,
-  onAccept,
-  onReject,
-  actionLoading,
+  trip, onAccept, onReject, actionLoading,
 }: {
   trip: OfferedTrip
   onAccept: (id: string) => void
@@ -96,13 +96,12 @@ function OfferedTripCard({
       borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 12,
       borderLeft: '3px solid var(--primary)',
     }}>
-      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div>
           <span style={{
-            fontSize: 11, fontWeight: 600, padding: '3px 8px',
-            borderRadius: 20, background: 'rgba(108 99 255 / .15)',
-            color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '.04em',
+            fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20,
+            background: 'rgba(108 99 255 / .15)', color: 'var(--primary)',
+            textTransform: 'uppercase', letterSpacing: '.04em',
           }}>
             Ofertado
           </span>
@@ -149,7 +148,6 @@ function OfferedTripCard({
         </div>
       </div>
 
-      {/* Info en grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '8px 10px' }}>
           <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Vehículo</p>
@@ -157,7 +155,7 @@ function OfferedTripCard({
             {[trip.vehicle_brand, trip.vehicle_model].filter(Boolean).join(' ') || '—'}
           </p>
           <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-            {trip.vehicle_plates ?? ''} {trip.vehicle_transmission ? `· ${trip.vehicle_transmission}` : ''}
+            {trip.vehicle_plates ?? ''}{trip.vehicle_transmission ? ` · ${trip.vehicle_transmission}` : ''}
           </p>
         </div>
         <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '8px 10px' }}>
@@ -167,7 +165,6 @@ function OfferedTripCard({
         </div>
       </div>
 
-      {/* Instrucciones especiales */}
       {trip.special_instructions && (
         <div style={{
           background: 'rgba(245 158 11 / .08)', border: '1px solid rgba(245 158 11 / .2)',
@@ -178,11 +175,10 @@ function OfferedTripCard({
         </div>
       )}
 
-      {/* Footer: monto + acciones */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4 }}>
         <div>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Monto estimado</p>
-          <p style={{ fontSize: 22, fontWeight: 800, color: 'var(--success)' }}>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Pago estimado</p>
+          <p style={{ fontSize: 24, fontWeight: 800, color: 'var(--success)' }}>
             ${Number(trip.driver_pay_mxn ?? 0).toLocaleString('es-MX')}
           </p>
         </div>
@@ -215,42 +211,61 @@ function OfferedTripCard({
   )
 }
 
-// ── Componente: Card de viaje aceptado ───────────────────────────────────────
+// ── Card: viaje aceptado ──────────────────────────────────────────────────────
 
-function AssignedTripCard({ trip }: { trip: AssignedTrip }) {
+function AssignedTripCard({
+  trip, onOpen, loadingId,
+}: {
+  trip: AssignedTrip
+  onOpen: (id: string) => void
+  loadingId: string | null
+}) {
   const statusColor = STATUS_COLOR[trip.status] ?? 'var(--border)'
+  const isLoading = loadingId === trip.id
 
   return (
-    <div style={{
-      background: 'var(--surface)', border: '1px solid var(--border)',
-      borderRadius: 12, padding: 14,
-      borderLeft: `3px solid ${statusColor}`,
-    }}>
+    <button
+      onClick={() => onOpen(trip.id)}
+      disabled={isLoading}
+      style={{
+        width: '100%', textAlign: 'left', cursor: 'pointer',
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: 12, padding: 14,
+        borderLeft: `3px solid ${statusColor}`,
+        opacity: isLoading ? 0.7 : 1,
+        transition: 'opacity .15s',
+      }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
         <p style={{ fontWeight: 700, fontSize: 12, fontFamily: 'monospace', color: 'var(--text-muted)' }}>
           {trip.id}
         </p>
         <span style={{
           fontSize: 11, fontWeight: 600, padding: '2px 8px',
-          borderRadius: 20, background: 'var(--surface-2)',
-          color: statusColor,
+          borderRadius: 20, background: 'var(--surface-2)', color: statusColor,
         }}>
-          {STATUS_LABELS[trip.status] ?? trip.status}
+          {isLoading ? '…' : (STATUS_LABELS[trip.status] ?? trip.status)}
         </span>
       </div>
       <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
-        {trip.vehicle_brand} {trip.vehicle_model} · {trip.vehicle_plates}
+        {[trip.vehicle_brand, trip.vehicle_model].filter(Boolean).join(' ') || '—'}
+        {trip.vehicle_plates ? ` · ${trip.vehicle_plates}` : ''}
       </p>
       <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-        {trip.origin_address?.split(',')[0]} → {trip.destination_address?.split(',')[0]}
+        {trip.origin_address?.split(',')[0] ?? '—'} → {trip.destination_address?.split(',')[0] ?? '—'}
       </p>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, alignItems: 'center' }}>
         <span style={{ color: 'var(--text-muted)' }}>~{trip.distance_km} km</span>
-        <span style={{ fontWeight: 700, color: 'var(--success)' }}>
-          ${Number(trip.driver_pay_mxn).toLocaleString('es-MX')}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontWeight: 700, color: 'var(--success)' }}>
+            ${Number(trip.driver_pay_mxn ?? 0).toLocaleString('es-MX')}
+          </span>
+          <span style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600 }}>
+            {isLoading ? 'Cargando…' : 'Ver detalle →'}
+          </span>
+        </div>
       </div>
-    </div>
+    </button>
   )
 }
 
@@ -260,19 +275,22 @@ export default function ViajesPage() {
   const { driver, loading: driverLoading } = useDriverProfile()
   const [tab, setTab] = useState<Tab>('Solicitados')
 
-  const [offered, setOffered] = useState<OfferedTrip[]>([])
+  const [offered, setOffered]   = useState<OfferedTrip[]>([])
   const [assigned, setAssigned] = useState<AssignedTrip[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
+
   const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const [actionError, setActionError] = useState('')
+  const [actionError, setActionError]     = useState('')
+
+  const [detailTrip, setDetailTrip]           = useState<TripDetail | null>(null)
+  const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     if (!driver) return
     setLoading(true)
     setError('')
     setActionError('')
-
     try {
       if (tab === 'Solicitados') {
         const res = await fetch('/api/trips/ofertados', { cache: 'no-store' })
@@ -283,11 +301,11 @@ export default function ViajesPage() {
         const res = await fetch('/api/trips', { cache: 'no-store' })
         const payload = await res.json().catch(() => null) as AssignedApiResponse | null
         if (!res.ok || !payload?.ok) throw new Error(payload && !payload.ok ? payload.error : 'Error al cargar viajes.')
-
-        const filtered = payload.data.filter(t => {
-          if (tab === 'Aceptados') return ACTIVE_STATUSES.has(t.status)
-          return t.status === 'finalizado'
-        })
+        const filtered = payload.data.filter(t =>
+          tab === 'Aceptados'
+            ? ACTIVE_STATUSES.has(t.status)
+            : t.status === 'finalizado' || t.status === 'cancelado'
+        )
         setAssigned(filtered)
       }
     } catch (err) {
@@ -305,10 +323,7 @@ export default function ViajesPage() {
     try {
       const res = await fetch(`/api/trips/${encodeURIComponent(tripId)}/aceptar`, { method: 'POST' })
       const payload = await res.json().catch(() => null)
-      if (!res.ok || !payload?.ok) {
-        throw new Error(payload?.error ?? 'No se pudo aceptar el viaje.')
-      }
-      // Quitar de la lista de ofertados
+      if (!res.ok || !payload?.ok) throw new Error(payload?.error ?? 'No se pudo aceptar el viaje.')
       setOffered(prev => prev.filter(t => t.id !== tripId))
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'No se pudo aceptar el viaje.')
@@ -323,9 +338,7 @@ export default function ViajesPage() {
     try {
       const res = await fetch(`/api/trips/${encodeURIComponent(tripId)}/rechazar`, { method: 'POST' })
       const payload = await res.json().catch(() => null)
-      if (!res.ok || !payload?.ok) {
-        throw new Error(payload?.error ?? 'No se pudo rechazar el viaje.')
-      }
+      if (!res.ok || !payload?.ok) throw new Error(payload?.error ?? 'No se pudo rechazar el viaje.')
       setOffered(prev => prev.filter(t => t.id !== tripId))
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'No se pudo rechazar el viaje.')
@@ -334,91 +347,136 @@ export default function ViajesPage() {
     }
   }
 
+  async function handleOpenDetail(tripId: string) {
+    setDetailLoadingId(tripId)
+    setActionError('')
+    try {
+      const res = await fetch(`/api/trips/${encodeURIComponent(tripId)}`, { cache: 'no-store' })
+      const payload = await res.json().catch(() => null) as TripDetailResponse | null
+      if (!res.ok || !payload?.ok) {
+        const errMsg = payload && typeof payload === 'object' && 'error' in payload && (payload as any).error
+          ? (payload as any).error
+          : 'No se pudo cargar el detalle.'
+        throw new Error(errMsg)
+      }
+      setDetailTrip(payload.data)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo cargar el detalle.')
+    } finally {
+      setDetailLoadingId(null)
+    }
+  }
+
+  function handleStatusChanged(updated: TripDetail) {
+    setDetailTrip(updated)
+    setAssigned(prev => prev.map(t =>
+      t.id === updated.id ? { ...t, status: updated.status } : t
+    ))
+    // Si el viaje se finalizó, mover a la pestaña correcta en el próximo reload
+  }
+
   const TABS: Tab[] = ['Solicitados', 'Aceptados', 'Finalizados']
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <h1 style={{ fontSize: 20, fontWeight: 800 }}>Mis viajes</h1>
+    <>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 800 }}>Mis viajes</h1>
 
-      {/* Tabs */}
-      <div style={{
-        display: 'flex', gap: 4,
-        background: 'var(--surface-2)', borderRadius: 10, padding: 4,
-      }}>
-        {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{
-            flex: 1, padding: '8px 4px', borderRadius: 7, border: 'none',
-            background: tab === t ? 'var(--surface)' : 'none',
-            color: tab === t ? 'var(--text)' : 'var(--text-muted)',
-            fontSize: 12, fontWeight: tab === t ? 600 : 400, cursor: 'pointer',
-            transition: 'background .15s',
+        {/* Tabs */}
+        <div style={{
+          display: 'flex', gap: 4,
+          background: 'var(--surface-2)', borderRadius: 10, padding: 4,
+        }}>
+          {TABS.map(t => (
+            <button key={t} onClick={() => setTab(t)} style={{
+              flex: 1, padding: '8px 4px', borderRadius: 7, border: 'none',
+              background: tab === t ? 'var(--surface)' : 'none',
+              color: tab === t ? 'var(--text)' : 'var(--text-muted)',
+              fontSize: 12, fontWeight: tab === t ? 600 : 400, cursor: 'pointer',
+              transition: 'background .15s',
+            }}>
+              {t}
+              {t === 'Solicitados' && offered.length > 0 && tab !== 'Solicitados' && (
+                <span style={{
+                  marginLeft: 4, fontSize: 10, background: 'var(--primary)',
+                  color: '#fff', borderRadius: 10, padding: '1px 5px',
+                }}>
+                  {offered.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {actionError && (
+          <div style={{
+            background: 'rgba(239 68 68 / .08)', border: '1px solid rgba(239 68 68 / .2)',
+            borderRadius: 8, padding: '10px 14px', color: 'var(--danger)', fontSize: 13,
           }}>
-            {t}
-            {t === 'Solicitados' && offered.length > 0 && tab !== 'Solicitados' && (
-              <span style={{
-                marginLeft: 4, fontSize: 10, background: 'var(--primary)',
-                color: '#fff', borderRadius: 10, padding: '1px 5px',
-              }}>
-                {offered.length}
-              </span>
-            )}
-          </button>
-        ))}
+            {actionError}
+          </div>
+        )}
+
+        {driverLoading || loading ? (
+          <p style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)' }}>Cargando viajes…</p>
+        ) : error ? (
+          <div style={{
+            background: 'rgba(239 68 68 / .08)', borderRadius: 10, padding: 16, color: 'var(--danger)',
+          }}>{error}</div>
+        ) : tab === 'Solicitados' ? (
+          offered.length === 0 ? (
+            <div style={{
+              textAlign: 'center', padding: '36px 16px',
+              background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)',
+            }}>
+              <p style={{ fontSize: 32, marginBottom: 10 }}>🔍</p>
+              <p style={{ fontWeight: 600, marginBottom: 4 }}>Sin viajes disponibles</p>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                No hay traslados ofertados en este momento. Revisa más tarde.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {offered.map(t => (
+                <OfferedTripCard
+                  key={t.id} trip={t}
+                  onAccept={handleAccept} onReject={handleReject}
+                  actionLoading={actionLoading}
+                />
+              ))}
+            </div>
+          )
+        ) : (
+          assigned.length === 0 ? (
+            <div style={{
+              textAlign: 'center', padding: '36px 16px',
+              background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)',
+            }}>
+              <p style={{ fontSize: 32, marginBottom: 10 }}>🚗</p>
+              <p style={{ fontWeight: 600, marginBottom: 4 }}>Sin viajes aquí</p>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                {tab === 'Aceptados' ? 'No tienes viajes activos ahora.' : 'Aún no tienes viajes finalizados.'}
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {assigned.map(t => (
+                <AssignedTripCard
+                  key={t.id} trip={t}
+                  onOpen={handleOpenDetail}
+                  loadingId={detailLoadingId}
+                />
+              ))}
+            </div>
+          )
+        )}
       </div>
 
-      {/* Error de acción */}
-      {actionError && (
-        <div className="card" style={{ color: 'var(--danger)', fontSize: 13 }}>{actionError}</div>
-      )}
-
-      {/* Contenido */}
-      {driverLoading || loading ? (
-        <p className="muted" style={{ textAlign: 'center', padding: 24 }}>Cargando viajes…</p>
-      ) : error ? (
-        <div className="card" style={{ color: 'var(--danger)' }}>{error}</div>
-      ) : tab === 'Solicitados' ? (
-        offered.length === 0 ? (
-          <div style={{
-            textAlign: 'center', padding: '36px 16px',
-            background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)',
-          }}>
-            <p style={{ fontSize: 32, marginBottom: 10 }}>🔍</p>
-            <p style={{ fontWeight: 600, marginBottom: 4 }}>Sin viajes disponibles</p>
-            <p className="muted" style={{ fontSize: 13 }}>
-              No hay traslados ofertados en este momento. Revisa más tarde.
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {offered.map(t => (
-              <OfferedTripCard
-                key={t.id}
-                trip={t}
-                onAccept={handleAccept}
-                onReject={handleReject}
-                actionLoading={actionLoading}
-              />
-            ))}
-          </div>
-        )
-      ) : (
-        assigned.length === 0 ? (
-          <div style={{
-            textAlign: 'center', padding: '36px 16px',
-            background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)',
-          }}>
-            <p style={{ fontSize: 32, marginBottom: 10 }}>🚗</p>
-            <p style={{ fontWeight: 600, marginBottom: 4 }}>Sin viajes aquí</p>
-            <p className="muted" style={{ fontSize: 13 }}>
-              {tab === 'Aceptados' ? 'No tienes viajes activos ahora.' : 'Aún no tienes viajes finalizados.'}
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {assigned.map(t => <AssignedTripCard key={t.id} trip={t} />)}
-          </div>
-        )
-      )}
-    </div>
+      <TripFlowSheet
+        trip={detailTrip}
+        onClose={() => setDetailTrip(null)}
+        onStatusChanged={handleStatusChanged}
+      />
+    </>
   )
 }

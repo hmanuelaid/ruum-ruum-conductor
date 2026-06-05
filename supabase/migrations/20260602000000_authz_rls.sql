@@ -105,11 +105,11 @@ for all
 to authenticated
 using (
   owner_type = 'driver'
-  and owner_id::text = public.current_driver_id()
+  and owner_id::text = public.current_driver_id()::text
 )
 with check (
   owner_type = 'driver'
-  and owner_id::text = public.current_driver_id()
+  and owner_id::text = public.current_driver_id()::text
 );
 
 drop policy if exists "Admins can manage payments" on public.payments;
@@ -133,15 +133,15 @@ create policy "Drivers can read assigned trips"
 on public.trips
 for select
 to authenticated
-using (driver_id::text = public.current_driver_id());
+using (driver_id::text = public.current_driver_id()::text);
 
 drop policy if exists "Drivers can update assigned trips" on public.trips;
 create policy "Drivers can update assigned trips"
 on public.trips
 for update
 to authenticated
-using (driver_id::text = public.current_driver_id())
-with check (driver_id::text = public.current_driver_id());
+using (driver_id::text = public.current_driver_id()::text)
+with check (driver_id::text = public.current_driver_id()::text);
 
 do $$
 begin
@@ -160,21 +160,21 @@ begin
     for all
     to authenticated
     using (
-      driver_id::text = public.current_driver_id()
+      driver_id::text = public.current_driver_id()::text
       and exists (
         select 1
         from public.trips trip
         where trip.id::text = trip_id::text
-        and trip.driver_id::text = public.current_driver_id()
+        and trip.driver_id::text = public.current_driver_id()::text
       )
     )
     with check (
-      driver_id::text = public.current_driver_id()
+      driver_id::text = public.current_driver_id()::text
       and exists (
         select 1
         from public.trips trip
         where trip.id::text = trip_id::text
-        and trip.driver_id::text = public.current_driver_id()
+        and trip.driver_id::text = public.current_driver_id()::text
       )
     );
   end if;

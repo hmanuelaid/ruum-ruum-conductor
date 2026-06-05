@@ -4,11 +4,10 @@ import { getApiAuthContext, jsonError } from '@/lib/api-auth'
 const OFFERED_COLUMNS = [
   'id', 'status',
   'vehicle_brand', 'vehicle_model', 'vehicle_year', 'vehicle_color',
-  'vehicle_plates', 'vehicle_transmission',
+  'vehicle_plates',
   'origin_address', 'origin_reference',
   'destination_address', 'destination_reference',
   'driver_pay_mxn', 'distance_km',
-  'scheduled_at', 'service_type', 'special_instructions',
   'created_at',
 ].join(',')
 
@@ -21,11 +20,14 @@ export async function GET() {
   const { data, error } = await auth.context.supabase
     .from('trips')
     .select(OFFERED_COLUMNS)
-    .eq('status', 'ofertado')
+    .eq('status', 'pendiente_asignacion')
     .is('driver_id', null)
-    .order('scheduled_at', { ascending: true })
+    .order('created_at', { ascending: true })
 
-  if (error) return jsonError('Could not load offered trips.', 500)
+  if (error) {
+    console.error('Could not load offered trips:', error)
+    return jsonError('Could not load offered trips.', 500)
+  }
 
   return NextResponse.json({ ok: true, data: data ?? [] })
 }

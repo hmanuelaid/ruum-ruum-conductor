@@ -50,16 +50,22 @@ export const mockTrips: Trip[] = [
 
 export const mockEarnings: EarningsSummary = {
   availableMXN: 8240,
+  totalLifetimeMXN: 54600,
   payoutDay: 'viernes',
   weekTrips: 12,
   weekEarningsMXN: 8240,
-  nextPayoutLabel: 'Vie · 14:00 - 18:00',
+  weekExpensesMXN: 0,
+  weekAdjustmentsMXN: 300,
+  weekNetMXN: 8540,
+  nextPayoutLabel: 'Vie · 14:00–18:00',
+  nextPayoutDateISO: '2025-06-13',
+  totalKm: 3420,
   movements: [
     {
       id: 'mv-001',
       type: 'trip',
-      label: 'Viaje T-001245',
-      sublabel: 'Santa Fe, CDMX',
+      label: 'Viaje completado',
+      sublabel: 'Santa Fe → Polanco',
       dateLabel: 'Hoy',
       amountMXN: 680,
     },
@@ -74,12 +80,13 @@ export const mockEarnings: EarningsSummary = {
     {
       id: 'mv-003',
       type: 'deposit',
-      label: 'Depósito',
+      label: 'Depósito realizado',
       sublabel: 'Cuenta terminación 4218',
       dateLabel: 'Viernes',
-      amountMXN: -7860,
+      amountMXN: 7860,
     },
   ],
+  weekHistory: [],
 }
 
 export const mockDocuments: DriverDocument[] = [

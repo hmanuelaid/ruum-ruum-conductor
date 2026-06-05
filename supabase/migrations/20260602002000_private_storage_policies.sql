@@ -59,12 +59,12 @@ to authenticated
 using (
   bucket_id = 'documents'
   and (storage.foldername(name))[1] = 'driver'
-  and (storage.foldername(name))[2] = public.current_driver_id()
+  and (storage.foldername(name))[2] = public.current_driver_id()::text
 )
 with check (
   bucket_id = 'documents'
   and (storage.foldername(name))[1] = 'driver'
-  and (storage.foldername(name))[2] = public.current_driver_id()
+  and (storage.foldername(name))[2] = public.current_driver_id()::text
 );
 
 drop policy if exists "Admins can manage evidence objects" on storage.objects;
@@ -92,7 +92,7 @@ using (
     select 1
     from public.trips trip
     where trip.id::text = (storage.foldername(name))[1]
-      and trip.driver_id::text = public.current_driver_id()
+      and trip.driver_id::text = public.current_driver_id()::text
   )
 )
 with check (
@@ -101,6 +101,6 @@ with check (
     select 1
     from public.trips trip
     where trip.id::text = (storage.foldername(name))[1]
-      and trip.driver_id::text = public.current_driver_id()
+      and trip.driver_id::text = public.current_driver_id()::text
   )
 );

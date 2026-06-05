@@ -1,22 +1,9 @@
 import { isDocumentStatus, type DocumentStatus } from '@/lib/document-contract'
+import { isTripPatchStatus } from '@/lib/trip-flow'
 
 export type ValidationResult<T> =
   | { ok: true; value: T }
   | { ok: false; error: string }
-
-const TRIP_STATUSES = new Set([
-  'ofertado',
-  'pendiente_asignacion',
-  'conductor_asignado',
-  'conductor_en_camino',
-  'recoleccion_proceso',
-  'evidencia_inicial_pendiente',
-  'traslado_curso',
-  'entrega_proceso',
-  'evidencia_final_pendiente',
-  'finalizado',
-  'cancelado',
-])
 
 export type TripPatchInput = {
   status: string
@@ -55,7 +42,7 @@ export function parseTripPatch(body: Record<string, unknown>): ValidationResult<
     return { ok: false, error: 'Unexpected fields in trip update.' }
   }
 
-  if (typeof body.status !== 'string' || !TRIP_STATUSES.has(body.status)) {
+  if (!isTripPatchStatus(body.status)) {
     return { ok: false, error: 'Invalid trip status.' }
   }
 
