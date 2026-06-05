@@ -9,6 +9,19 @@ const variantMap: Record<string, ChipVariant> = {
   completed: 'success',
   closed:    'neutral',
   cancelled: 'danger',
+  solicitud_recibida: 'info',
+  pendiente_revision: 'warning',
+  pendiente_asignacion: 'warning',
+  conductor_asignado: 'info',
+  conductor_en_camino: 'info',
+  recoleccion_proceso: 'warning',
+  evidencia_inicial_pendiente: 'warning',
+  traslado_curso: 'info',
+  entrega_proceso: 'warning',
+  evidencia_final_pendiente: 'warning',
+  finalizado: 'success',
+  cancelado: 'danger',
+  incidente: 'danger',
   approved:  'success',
   review:    'warning',
   pending:   'neutral',
@@ -27,4 +40,3 @@ export function Chip({ variant, status, children }: ChipProps) {
   const v = variant ?? (status ? variantMap[status] ?? 'neutral' : 'neutral')
   return <span className={`chip chip-${v}`}>{children}</span>
 }
-

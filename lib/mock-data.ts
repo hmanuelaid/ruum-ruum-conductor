@@ -18,7 +18,7 @@ export const mockDriver: Driver = {
 export const mockTrips: Trip[] = [
   {
     id: 'T-001245',
-    status: 'active',
+    status: 'conductor_asignado',
     origin: { label: 'Lugar inicio', address: 'Roma Norte, CDMX' },
     destination: { label: 'Lugar destino', address: 'Santa Fe, CDMX' },
     etaMin: 34,
@@ -28,7 +28,7 @@ export const mockTrips: Trip[] = [
   },
   {
     id: 'T-001239',
-    status: 'completed',
+    status: 'finalizado',
     origin: { label: 'Lugar inicio', address: 'Polanco, CDMX' },
     destination: { label: 'Lugar destino', address: 'Condesa, CDMX' },
     etaMin: 28,
@@ -38,7 +38,7 @@ export const mockTrips: Trip[] = [
   },
   {
     id: 'T-001233',
-    status: 'closed',
+    status: 'cancelado',
     origin: { label: 'Lugar inicio', address: 'Coyoacán, CDMX' },
     destination: { label: 'Lugar destino', address: 'Reforma, CDMX' },
     etaMin: 41,

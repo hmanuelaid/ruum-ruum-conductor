@@ -10,7 +10,7 @@ La aplicacion usa un solo enum de estado definido en `lib/document-contract.ts`:
 - `rechazado`
 - `vencido`
 
-Los estados legacy como `pendiente`, `pending`, `review`, `approved`, `rejected` y `expired` se normalizan al leer y se migran con `supabase/migrations/20260602001000_document_contract.sql`.
+Los estados legacy como `pendiente`, `pending`, `review`, `approved`, `rejected` y `expired` se normalizan al leer y se migran con `../ruum-ruum-database/supabase/migrations/20260602001000_document_contract.sql`.
 
 ## Archivo privado
 
@@ -18,7 +18,7 @@ La referencia canonica del archivo en base de datos es `documents.storage_path`.
 
 `documents.url` y `documents.file_url` se conservan como locators legacy o campos de respuesta. Las nuevas escrituras deben guardar `storage_path`; `/api/documents` devuelve `url` como signed URL temporal cuando existe `storage_path`.
 
-Los buckets `documents`, `trip-evidence` y `evidence` deben ser privados. Las policies y columnas de storage estan versionadas en `supabase/migrations/20260602002000_private_storage_policies.sql`.
+Los buckets `documents`, `trip-evidence` y `evidence` deben ser privados. Las policies y columnas de storage estan versionadas en `../ruum-ruum-database/supabase/migrations/20260602002000_private_storage_policies.sql`.
 
 ## Validacion
 

@@ -1,4 +1,7 @@
 // ─── Driver ───────────────────────────────────────────────────────────────────
+import type { TripStatus } from '@ruum/types'
+export type { TripStatus } from '@ruum/types'
+
 export interface Driver {
   id: string
   name: string
@@ -9,8 +12,6 @@ export interface Driver {
 }
 
 // ─── Trip ─────────────────────────────────────────────────────────────────────
-export type TripStatus = 'active' | 'completed' | 'closed' | 'cancelled'
-
 export interface TripStop {
   label: string
   address: string

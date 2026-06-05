@@ -33,7 +33,7 @@ Conductor:
 
 ## RLS versionado
 
-La migracion `supabase/migrations/20260602000000_authz_rls.sql` habilita RLS para las tablas usadas por las rutas admin/conductor y agrega politicas base para:
+La migracion `../ruum-ruum-database/supabase/migrations/20260602000000_authz_rls.sql` habilita RLS para las tablas usadas por las rutas admin/conductor y agrega politicas base para:
 
 - Administradores sobre `app_users`, `drivers`, `documents`, `payments`, `trips` y `trip_evidence`.
 - Conductores sobre su propio perfil, documentos, viajes asignados y evidencia de esos viajes.
@@ -42,9 +42,9 @@ Antes de aplicarla en Supabase, confirmar que los nombres de columnas coinciden 
 
 El contrato de `documents.status`, storage privado y signed URLs esta descrito en `docs/documents.md` y versionado en:
 
-- `supabase/migrations/20260602001000_document_contract.sql`
-- `supabase/migrations/20260602002000_private_storage_policies.sql`
-- `supabase/migrations/20260602003000_driver_profile_creation_policy.sql`
+- `../ruum-ruum-database/supabase/migrations/20260602001000_document_contract.sql`
+- `../ruum-ruum-database/supabase/migrations/20260602002000_private_storage_policies.sql`
+- `../ruum-ruum-database/supabase/migrations/20260602003000_driver_profile_creation_policy.sql`
 
 ## Smoke tests recomendados
 
