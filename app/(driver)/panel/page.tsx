@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase'
 import { useDriverProfile } from '@/lib/useDriverProfile'
 import { usePanelSummary } from '@/lib/usePanelSummary'
 import AvailabilityToggle from '@/components/driver/AvailabilityToggle'
+import NextPayoutCard from '@/components/driver/NextPayoutCard'
+import TripPreferencesCard from '@/components/driver/TripPreferencesCard'
 import WeeklyMetrics from '@/components/driver/WeeklyMetrics'
 import CameraUpload from '@/components/ui/CameraUpload'
 
@@ -174,6 +176,12 @@ export default function PanelPage() {
 
       {/* ── Resumen semanal (Sprint 1) ── */}
       {summary && <WeeklyMetrics earnings={summary} />}
+
+      {/* ── Próximo pago (Sprint 5) ── */}
+      {summary && <NextPayoutCard earnings={summary} />}
+
+      {/* ── Preferencias de viaje (Sprint 5) ── */}
+      <TripPreferencesCard driverId={driver.id} />
 
       {/* ── Error de viaje ── */}
       {tripError && (

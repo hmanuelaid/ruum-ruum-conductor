@@ -67,6 +67,27 @@ export interface EarningsSummary {
   weekHistory: WeekSummary[]
 }
 
+// ─── Driver Trip Preferences ─────────────────────────────────────────────────
+export type DriverShiftPreference = 'manana' | 'tarde' | 'noche' | 'mixto'
+
+export interface DriverTripPreferences {
+  preferred_zones: string[]
+  max_trip_distance_km: number
+  minimum_trip_pay_mxn: number
+  preferred_shift: DriverShiftPreference
+  accepts_long_distance: boolean
+}
+
+// ─── Driver Account Settings ─────────────────────────────────────────────────
+export interface DriverAccountSettings {
+  name: string
+  phone: string
+  email: string
+  bank_name: string
+  bank_account_holder: string
+  bank_clabe: string
+}
+
 // ─── Trip Detail (viaje aceptado con datos completos) ─────────────────────────
 export type TripFlowStatus =
   | 'conductor_asignado'
