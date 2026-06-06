@@ -108,7 +108,24 @@ export default function PanelPage() {
     }
 
     void loadActiveTrip()
-    return () => { cancelled = true }
+
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`driver-active-trip:${driver.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'trips',
+        filter: `driver_id=eq.${driver.id}`,
+      }, () => {
+        void loadActiveTrip()
+      })
+      .subscribe()
+
+    return () => {
+      cancelled = true
+      void supabase.removeChannel(channel)
+    }
   }, [driver])
 
   async function handleLogout() {

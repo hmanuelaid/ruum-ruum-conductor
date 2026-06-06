@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getApiAuthContext, jsonError } from '@/lib/api-auth'
+import { updateDriverAvailabilityBestEffort } from '@/lib/driver-availability'
 
 const TRIP_COLUMNS = [
   'id', 'status', 'driver_id',
@@ -12,11 +13,11 @@ const TRIP_COLUMNS = [
 ].join(',')
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const auth = await getApiAuthContext()
+  const auth = await getApiAuthContext(req, 'trips')
   if (!auth.ok) return auth.response
 
   if (!auth.context.driverId) return jsonError('Driver profile required.', 403)
@@ -52,11 +53,13 @@ export async function POST(
   }
   if (!data) return jsonError('Trip no longer available.', 409)
 
-  // Actualizar disponibilidad del conductor a 'en_viaje'
-  await auth.context.supabase
-    .from('drivers')
-    .update({ availability_status: 'en_viaje' })
-    .eq('id', auth.context.driverId)
+  await updateDriverAvailabilityBestEffort(
+    auth.context.supabase,
+    'aceptar',
+    auth.context.driverId,
+    id,
+    'en_viaje'
+  )
 
   return NextResponse.json({ ok: true, data })
 }

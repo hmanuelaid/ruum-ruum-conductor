@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getApiAuthContext, jsonError, requireDriverOrAdmin } from '@/lib/api-auth'
 import { parseTripPatch, readJsonObject } from '@/lib/api-validation'
+import { updateDriverAvailabilityBestEffort } from '@/lib/driver-availability'
 import type { TripDetail, TripFlowStatus } from '@/lib/types'
 import {
   getRequiredEvidenceForTransition,
@@ -174,10 +175,13 @@ export async function PATCH(
   const updated = data as unknown as TripDetail
 
   if (['finalizado', 'cancelado'].includes(updated.status) && updated.driver_id) {
-    await auth.context.supabase
-      .from('drivers')
-      .update({ availability_status: 'disponible' })
-      .eq('id', updated.driver_id)
+    await updateDriverAvailabilityBestEffort(
+      auth.context.supabase,
+      'trip-status',
+      updated.driver_id,
+      id,
+      'disponible'
+    )
   }
 
   return NextResponse.json({

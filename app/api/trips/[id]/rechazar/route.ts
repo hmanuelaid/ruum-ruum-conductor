@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
 import { getApiAuthContext, jsonError } from '@/lib/api-auth'
+import { updateDriverAvailabilityBestEffort } from '@/lib/driver-availability'
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const auth = await getApiAuthContext()
+  const auth = await getApiAuthContext(req, 'trips')
   if (!auth.ok) return auth.response
 
   if (!auth.context.driverId) return jsonError('Driver profile required.', 403)
@@ -38,10 +39,13 @@ export async function POST(
 
   if (error) return jsonError('Could not reject trip.', 500)
 
-  await auth.context.supabase
-    .from('drivers')
-    .update({ availability_status: 'disponible' })
-    .eq('id', auth.context.driverId)
+  await updateDriverAvailabilityBestEffort(
+    auth.context.supabase,
+    'rechazar',
+    auth.context.driverId,
+    id,
+    'disponible'
+  )
 
   return NextResponse.json({ ok: true })
 }

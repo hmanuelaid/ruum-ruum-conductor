@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useDriverProfile } from '@/lib/useDriverProfile'
+import { createClient } from '@/lib/supabase'
 import TripFlowSheet from '@/components/trip/TripFlowSheet'
 import type { TripDetail } from '@/lib/types'
 
@@ -316,6 +317,32 @@ export default function ViajesPage() {
   }, [driver, tab])
 
   useEffect(() => { void loadData() }, [loadData])
+
+  useEffect(() => {
+    if (!driver) return
+
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`driver-trips:${driver.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'trips',
+        filter: `driver_id=eq.${driver.id}`,
+      }, payload => {
+        const updated = payload.new as { id?: string; status?: string } | null
+        setDetailTrip(prev => {
+          if (!prev || !updated?.id || !updated.status || prev.id !== updated.id) return prev
+          return { ...prev, status: updated.status as TripDetail['status'] }
+        })
+        void loadData()
+      })
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [driver, loadData])
 
   async function handleAccept(tripId: string) {
     setActionLoading(tripId)

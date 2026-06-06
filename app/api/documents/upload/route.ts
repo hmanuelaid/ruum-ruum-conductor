@@ -12,7 +12,7 @@ import {
 } from '@/lib/private-storage'
 
 export async function POST(req: Request) {
-  const auth = await getApiAuthContext()
+  const auth = await getApiAuthContext(req, 'upload')
   if (!auth.ok) return auth.response
 
   const forbidden = requireDriverOrAdmin(auth.context)
